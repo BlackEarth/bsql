@@ -10,7 +10,7 @@ Designed to be small, fast, and transparent. Integrates with user-defined record
 ---------------------------------------------------------------------------
                                             Memory:  Footprint:
 # > python                                  4656 K   4656 K (Python 3.4.3 osx)
-# >>> from bl.database import Database   5460 K    804 K (YMMV)
+# >>> from bl.database import Database      5460 K    804 K (YMMV)
 ---------------------------------------------------------------------------
 Sample session: 
 >>> d = Database()      # in-memory sqlite3 database
@@ -25,15 +25,16 @@ Sample session:
 
 import datetime, imp, re, time
 from bl.dict import Dict
+from bl.log import Log
 
 class Database(Dict):
     """a database connection object."""
 
-    def __init__(self, connection_string=None, dba=None, tries=3, DEBUG=False, log=print, **args):
+    def __init__(self, connection_string=None, dba=None, tries=3, debug=False, log=Log(), **args):
         Dict.__init__(self, 
             connection_string=re.sub('\s+', ' ', connection_string or ''),
             dba=dba or imp.load_module('sqlite3', *imp.find_module('sqlite3')), 
-            DEBUG=DEBUG, tries=tries, log=log, **args)
+            debug=debug, tries=tries, log=log, **args)
         if self.dba is None:
             import sqlite3
             self.dba = sqlite3
@@ -62,7 +63,7 @@ class Database(Dict):
                 if i==list(range(tries))[-1]:       # last try failed
                     raise
                 else:                               # wait a bit
-                    time.sleep(2*i)
+                    time.sleep(2*i)                 # doubling the time on each wait
         if self.dba.__name__ == 'sqlite3':
             self.execute("pragma foreign_keys = ON")
 
@@ -79,9 +80,10 @@ class Database(Dict):
         return cursor
 
     def execute(self, sql, vals=None, cursor=None):
-        """execute SQL transaction, commit it, and return nothing. If a cursor is specified, work within that transaction."""
-        if self.DEBUG==True:
-            self.log(sql)
+        """execute SQL transaction, commit it, and return nothing. 
+        If a cursor is specified, work within that transaction.
+        """
+        if self.debug==True: self.log(sql)
         try:
             c = cursor or self.connection.cursor()
             if vals in [None, (), [], {}]:
@@ -123,7 +125,6 @@ class Database(Dict):
 
     def selectgen(self, sql, vals=None, Record=None, cursor=None):
         """select from db and yield a generator"""
-        if self.DEBUG == True: print("==SELECT:==\n", sql)
         c = cursor or self.cursor()
         self.execute(sql, vals=vals, cursor=c)
 

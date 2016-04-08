@@ -1,7 +1,9 @@
 
-import os, time, traceback
+import os, traceback
 from glob import glob
-from bl.model import Model
+from bl.log import Log
+
+from .model import Model
 
 class Migration(Model):
     relation = 'migrations'
@@ -12,9 +14,9 @@ class Migration(Model):
         return os.path.basename(os.path.splitext(filename)[0])
 
     @classmethod
-    def migrate(M, db, migrations_path=None, log=print):
-        "update the database with unapplied migrations"
-        migrations_path = migrations_path or db.migrations
+    def migrate(M, db, path=None, log=Log()):
+        """update the database with unapplied migrations"""
+        path = path or db.migrations
         try:
             # will throw an error if this is the first migration -- migrations table doesn't yet exist.
             # (and this approach is a bit easier than querying for the existence of the table...)
@@ -22,10 +24,10 @@ class Migration(Model):
         except:
             migrations_ids = []
         fns = [fn for fn 
-                in glob(os.path.join(migrations_path, "*.*")) 
+                in glob(os.path.join(path, "*.*")) 
                 if M.create_id(fn) not in migrations_ids]
         fns.sort()
-        log("[%s]" % time.strftime("%Y-%m-%d %H:%M:%S"), "Migrate Database: %d migrations" % len(fns))
+        log("[%s]" % log.timestamp(), "Migrate Database: %d migrations" % len(fns))
         for fn in fns:
             id = M.create_id(fn)
             ext = os.path.splitext(fn)[1]

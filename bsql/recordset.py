@@ -1,5 +1,4 @@
 
-
 import sys
 from bl.dict import Dict
 
@@ -30,7 +29,7 @@ class RecordSet(list):
             if match == True:
                 return record
 
-    def as_dict(self, key):
+    def dict(self, key):
         """returns the RecordSet as a dict of records, keyed to strings or tuples. 
             keys must be unique, or later duplicates will overwrite earlier ones."""
         d = Dict()
@@ -41,9 +40,9 @@ class RecordSet(list):
                 d[record.key_tuple(key)] = record
         return d
         
-    def as_json(self, fields=[]):
+    def json(self, fields=[]):
         """Return the contents of this record set as json"""
-        l = [record.as_json(fields=fields) for record in self]
+        l = [record.json(fields=fields) for record in self]
         return '[' + ', '.join(l) + ']'
 
         

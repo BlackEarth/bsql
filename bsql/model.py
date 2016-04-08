@@ -3,13 +3,14 @@ import datetime
 import datetime, re, sys
 from bl.dict import Dict
 from bl.string import String
-from bl.record import Record
+
+from .record import Record
 
 class Model(Record):
     """abstract base class for database models to inherit from, holds shared functionality.
 
     # -- Use an in-memory sqlite3 database for testing: --
-    >>> from bl.database import Database
+    >>> from bsql.database import Database
     >>> db = Database()
     >>> db.execute("create table model_test (id integer primary key autoincrement, name varchar)")
 

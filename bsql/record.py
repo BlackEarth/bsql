@@ -17,9 +17,9 @@ class Record(Dict):
             key = self.keys()
         return tuple([self[k] for k in key])
         
-    def as_json(self, fields=None, indent=None, tag=None):
+    def json(self, fields=None, indent=None, tag=None):
         """Return the contents of this record as json"""
-        import json
+        import json as _json
         d = Dict()
         if tag is None:
             tag = String(self.__class__.__name__).identifier().lower()
@@ -28,7 +28,7 @@ class Record(Dict):
             d[k] = self.get(k)
             if type(d[k]) == datetime.datetime:         # datetime not compatible with json.dumps
                 d[k] = d[k].isoformat(' ')              # -- iso formatted string
-        return json.dumps(j, indent=indent)
+        return _json.dumps(j, indent=indent)
 
     def using_keys(self, keys=[]):
         """return a copy of this record that only has the given keys. 
