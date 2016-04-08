@@ -1,2 +1,4 @@
 # bsql
-sql database library
+Black Earth SQL database library
+
+    $ pip install bsql
