@@ -236,7 +236,7 @@ class Database(Dict):
                 "select * from information_schema.tables where table_name=%s limit 1", (table_name,))
 
 def doctests():
-    """doctests for the bl.db module
+    """
     >>> d = Database()
     >>> d.execute("create table table1 (name varchar primary key, email varchar not null unique);")
     >>> d.execute("insert into table1 (name, email) values ('sah', 'sah@blackearthgroup.com')")
