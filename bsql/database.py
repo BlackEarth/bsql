@@ -77,7 +77,7 @@ class Database(Dict):
             pass
 
     def __repr__(self):
-        return "Database(dba=%s, connection_string='%s')" % (self.dba.__module__, self.connection_string)
+        return "Database(dba=%s, connection_string='%s')" % (self.dba, self.connection_string)
 
     def migrate(self, migrations=None):
         from .migration import Migration
@@ -216,7 +216,9 @@ class Database(Dict):
 
     def servername(self):
         """return a string that describes the database server being used"""
-        if 'psycopg' in self.dba.__module__: 
+        if type(self.dba) in [str, bytes]:
+            return self.dba
+        elif 'psycopg' in self.dba.__module__: 
             return 'postgresql'
         elif 'sqlite' in self.dba.__module__: 
             return 'sqlite'
