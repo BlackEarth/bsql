@@ -30,45 +30,54 @@ from bl.log import Log
 class Database(Dict):
     """a database connection object."""
 
-    def __init__(self, connection_string=None, dba=None, tries=3, debug=False, log=Log(), **args):
+    def __init__(self, connection_string=None, dba=None, connection=None, tries=3, debug=False, log=Log(), **args):
         Dict.__init__(self, 
             connection_string=re.sub('\s+', ' ', connection_string or ''),
-            dba=dba or imp.load_module('sqlite3', *imp.find_module('sqlite3')), 
+            connection=connection,
+            dba=dba, 
             debug=debug, tries=tries, log=log, **args)
-        if self.dba is None:
+        if self.connection is not None:
+            self.dba = self.connection.__module__
+        elif self.dba is None:
             import sqlite3
             self.dba = sqlite3
         elif type(self.dba) in (str, bytes):
             fm = imp.find_module(dba)
             self.dba = imp.load_module(self.dba, fm[0], fm[1], fm[2])
 
-        if self.dba.__name__ == 'psycopg2':
-            # make psycopg2 always return unicode strings
-            try:
-                dba.extensions.register_type(dba.extensions.UNICODE)
-                dba.extensions.register_type(dba.extensions.UNICODEARRAY)                    
-            except:
-                # if that didn't work for some reason, then just go with the default setup.
-                pass
+        # if self.dba.__module__ == 'psycopg2':
+        #     # make psycopg2 always return unicode strings
+        #     try:
+        #         dba.extensions.register_type(dba.extensions.UNICODE)
+        #         dba.extensions.register_type(dba.extensions.UNICODEARRAY)                    
+        #     except:
+        #         # if that didn't work for some reason, then just go with the default setup.
+        #         pass
             
         # try reaching the db "tries" times, with increasing wait times, before raising an exception.
-        for i in range(tries):
-            try: 
-                if self.connection_string != None:
-                    self.connection = self.dba.connect(self.connection_string)
-                else:
-                    self.connection = self.dba.connect(**args)
-                break
-            except: 
-                if i==list(range(tries))[-1]:       # last try failed
-                    raise
-                else:                               # wait a bit
-                    time.sleep(2*i)                 # doubling the time on each wait
-        if self.dba.__name__ == 'sqlite3':
-            self.execute("pragma foreign_keys = ON")
+        if self.connection is None:
+            for i in range(tries):
+                try: 
+                    if self.connection_string != None:
+                        print(dba.connect, self.connection_string)
+                        self.connection = self.dba.connect(self.connection_string)
+                    else:
+                        print(dba.connect, args)
+                        self.connection = self.dba.connect(**args)
+                    break
+                except: 
+                    if i==list(range(tries))[-1]:       # last try failed
+                        raise
+                    else:                               # wait a bit
+                        time.sleep(2*i)                 # doubling the time on each wait
+        try:
+            if self.dba == 'sqlite3' or self.dba.__module__ == 'sqlite3':
+                self.execute("pragma foreign_keys = ON")
+        except:
+            pass
 
     def __repr__(self):
-        return "Database(dba=%s, connection_string='%s')" % (self.dba.__name__, self.connection_string)
+        return "Database(dba=%s, connection_string='%s')" % (self.dba.__module__, self.connection_string)
 
     def migrate(self, migrations=None):
         from .migration import Migration
@@ -207,9 +216,9 @@ class Database(Dict):
 
     def servername(self):
         """return a string that describes the database server being used"""
-        if 'psycopg' in self.dba.__name__: 
+        if 'psycopg' in self.dba.__module__: 
             return 'postgresql'
-        elif 'sqlite' in self.dba.__name__: 
+        elif 'sqlite' in self.dba.__module__: 
             return 'sqlite'
         elif self.dbconfig is not None and self.dbconfig.server is not None:
             return self.dbconfig.server
