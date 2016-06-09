@@ -180,9 +180,9 @@ class Model(Record):
             sql += " where %s " % self.where_from_args(where, **kwargs)
 
         if orderby not in ["", None]:
-            sql += " order by %s " % orderby
-        else:       # default to using pk for orderby
-            sql += " order by %s " % ",".join(self.pk)
+            sql += """ order by "%s" """ % orderby
+        elif len(self.pk) > 0:       # default to using pk for orderby
+            sql += """ order by "%s" """ % '","'.join(self.pk)
         if limit not in [0, None] and self.db.servername() != 'sqlserver': 
             sql += " limit %d" % int(limit)
 
