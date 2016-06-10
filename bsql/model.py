@@ -1,4 +1,6 @@
 
+DEBUG = True
+
 import datetime
 import datetime, re, sys
 from bl.dict import Dict
@@ -58,18 +60,19 @@ class Model(Record):
         if self.relation is None: 
             self.__dict__['relation'] = String(self.__class__.__name__).identifier().lower() + 's'
 
-    def to_one(self, to_class, to_fields=['*'], self_key=None, foreign_key=None, 
+    def to_one(self, other_class, to_fields=['*'], foreign_key=None, other_key=None, 
                      update=False, cache_field=None, orderby=None, **kwargs):
         """returns a record based on the fk fields in this relation."""
         # make sure we have a valid record
         for k in self.pk:
             if self.get(k) is None: return None
         
-        if self_key is None: self_key = self.pk
-        if foreign_key is None: foreign_key = to_class.pk
-        if cache_field is None: cache_field = to_class.__name__
+        if foreign_key is None: 
+            foreign_key = ["%s_%s" % (other_class.__name__.lower(), fk) for fk in other_class.pk]
+        if other_key is None: other_key = other_class.pk
+        if cache_field is None: cache_field = other_class.__name__
 
-        for k in self_key:
+        for k in foreign_key:
             if self.get(k) is None: return None
 
         if update==True or self.__dict__.get(cache_field)==None:
@@ -77,19 +80,19 @@ class Model(Record):
             wherelist = []
             if self.where is not None: 
                 wherelist += [self.where]
-            fields = list(zip(self_key, foreign_key))
+            fields = list(zip(foreign_key, other_key))
             for field in fields:
                 wherelist.append("%s=%s" % (field[1], self.quote(self[field[0]])))
             wherecl = " and ".join(wherelist)
             attr = ','.join(to_fields)
             if orderby is not None:
-                selexpr = """to_class(self.db).select_one(attr="%s", where="%s", orderby="%s", **kwargs)""" % (attr, wherecl, orderby)
+                selexpr = """other_class(self.db).select_one(attr="%s", where="%s", orderby="%s", **kwargs)""" % (attr, wherecl, orderby)
             else:
-                selexpr = """to_class(self.db).select_one(attr="%s", where="%s", **kwargs)""" % (attr, wherecl)
+                selexpr = """other_class(self.db).select_one(attr="%s", where="%s", **kwargs)""" % (attr, wherecl)
             self.__dict__[cache_field] = eval(selexpr)
         return self.__dict__[cache_field]
 
-    def to_many(self, to_class, 
+    def to_many(self, other_class, 
                 self_key=None, foreign_key=None, update=False, cache_field=None, 
                 orderby=None, where=None, **kwargs):
         """return a set of records from a foreign class that key to this instance."""
@@ -98,8 +101,9 @@ class Model(Record):
             if self.get(k) is None: return []
         
         if self_key is None: self_key = self.pk
-        if foreign_key is None: foreign_key = to_class.pk
-        if cache_field is None: cache_field = to_class.__name__
+        if foreign_key is None: 
+            foreign_key = ["%s_%s" % (self.__class__.__name__.lower(), fk) for fk in self.pk]
+        if cache_field is None: cache_field = other_class.__name__
 
         for k in self_key:
             if self.get(k) is None: return []
@@ -115,13 +119,13 @@ class Model(Record):
             if where not in ['', None]: 
                 wherecl += " and %s " % self.where_from_args(where)            
             if orderby is not None:
-                selexpr = """to_class(self.db).select(where="%s", orderby="%s", **kwargs)""" % (wherecl, orderby)
+                selexpr = """other_class(self.db).select(where="%s", orderby="%s", **kwargs)""" % (wherecl, orderby)
             else:
-                selexpr = """to_class(self.db).select(where="%s", **kwargs)""" % (wherecl)
-            self.__dict__[cache_field] = eval(selexpr)
-        return self.__dict__[cache_field]
+                selexpr = """other_class(self.db).select(where="%s", **kwargs)""" % (wherecl)
+            self.__dict__[cache_field] = eval(selexpr) or []
+        return self.__dict__[cache_field] or []
 
-    def to_many_through(self, to_class, through_relation, through_fields, 
+    def to_many_through(self, other_class, through_relation, through_fields, 
                         self_key=None, foreign_key=None, to_fields=['*'], 
                         also_select=[], cache_field=None, update=False, 
                         orderby=None, where=None, limit=None, offset=0, **kwargs):
@@ -132,8 +136,9 @@ class Model(Record):
             if self.get(k) is None: return []
         
         if self_key is None: self_key = self.pk
-        if foreign_key is None: foreign_key = to_class.pk
-        if cache_field is None: cache_field = to_class.__name__
+        if foreign_key is None: 
+            foreign_key = ["%s_%s" % (self.__class__.__name__.lower(), fk) for fk in self.pk]
+        if cache_field is None: cache_field = other_class.__name__
         
         for k in self_key:
             if self.get(k) is None: return []
@@ -141,7 +146,7 @@ class Model(Record):
         if update==True or self.__dict__.get(cache_field)==None:
             # add the relation names to the field names in each field list -- avoid ambiguity in the query
             self_key = ["%s.%s" % (self.relation, field) for field in self_key]
-            foreign_key = ["%s.%s" % (to_class.relation, field) for field in foreign_key]
+            foreign_key = ["%s.%s" % (other_class.relation, field) for field in foreign_key]
             through_fields = ["%s.%s" % (through_relation, field) for field in through_fields]
 
             # create lists for the inner joins
@@ -149,26 +154,26 @@ class Model(Record):
             onforeign = [" %s=%s " % field for field in zip(foreign_key, through_fields[len(onself):])]  # uses the rest of the fields in through_fields
 
             # build the query
-            sql = "select " + ", ".join(["%s.%s" % (to_class.relation, field) for field in to_fields])
+            sql = "select " + ", ".join(["%s.%s" % (other_class.relation, field) for field in to_fields])
             if type(also_select)==list and len(also_select) > 0:
                 sql += ", " + ', '.join(also_select)
             elif type(also_select)==str and len(also_select)> 0:
                 sql += ', ' + also_select
-            sql+= " from %s" % to_class.relation
+            sql+= " from %s" % other_class.relation
             sql+= "\n inner join %s on %s" % (through_relation, " and ".join(onforeign))
             sql+= "\n inner join %s on %s" % (self.relation, " and ".join(onself))
             sql+= "\n where %s" % " and ".join(["%s=%s" % (field, self.quote(self[field.split('.')[1]])) for field in self_key])
             if where not in ['', None] or len(kwargs)>0: 
                 sql += " and %s " % self.where_from_args(where)
-            if orderby in ['', None]: orderby = ",".join(to_class.pk)
+            if orderby in ['', None]: orderby = ",".join(other_class.pk)
             sql += "\n order by %s" % orderby            
             if limit not in [0, None]: sql += " limit %d" % int(limit)
             if offset != 0 and type(offset) == int:
                 sql += " offset %d " % offset
             
             # select and cache the data
-            self.__dict__[cache_field] = self.db.select(sql, Record=to_class)
-        return self.__dict__[cache_field]        
+            self.__dict__[cache_field] = self.db.select(sql, Record=other_class)
+        return self.__dict__[cache_field] or []
 
     def prepare_query(self, attr='*', from_expr=None, where="", vals=None, orderby="", limit=None, offset=0, **kwargs):
         if from_expr is None: from_expr = self.relation
