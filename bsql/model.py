@@ -405,6 +405,22 @@ class Model(Record):
     def after_delete(self): pass
     def after_select(self): pass
 
+    # import 
+
+    @classmethod
+    def from_element(Class, db, element):
+        """convert an (xml) element into an instance. Rules:
+        * The element attributes are primary key values
+        * The element children tags are keys, texts are values
+        """
+        record = Class(db, **element.attrib)
+        for ch in [ch for ch in element.xpath("*") if ch.text not in [None, '']]:
+            tag = re.sub("^\{[^\}]*\}", "", ch.tag)
+            record[tag] = ch.text
+        return record
+
+
+
 
 if __name__ == "__main__":
     import doctest
