@@ -363,6 +363,13 @@ class Model(Record):
         except:
             return sys.exc_info()[1].args[0]        
 
+    def insert_or_update(self, reload=True, cursor=None, **kwargs):
+        r = self.select_one(**{k:self[k] for k in self.pk})
+        if r is None:
+            self.insert(reload=reload, cursor=cursor, **kwargs)
+        else:
+            self.commit(reload=reload, cursor=cursor, **kwargs)
+
     def delete(self, where=None, vals=None, cursor=None):
         """delete the current instance from its relation -- must be up-to-date to do w/o where clause."""
         self.before_delete()
