@@ -92,7 +92,7 @@ class Database(Dict):
         """execute SQL transaction, commit it, and return nothing. 
         If a cursor is specified, work within that transaction.
         """
-        if self.debug==True: self.log(sql)
+        if self.debug==True: self.log(sql, vals or [])
         try:
             c = cursor or self.connection.cursor()
             if vals in [None, (), [], {}]:
@@ -233,6 +233,16 @@ class Database(Dict):
         else: 
             return ''
         
+    def table_names(self):
+        sn = self.servername().lower()
+        if 'sqlite' in sn:
+            names = [r.name for r in self.select("select name from sqlite_master where type='table'")]
+        elif 'mysql' in sn:
+            names = [r.values()[0] for r in self.select("show tables")]
+        else:
+            names = [r.table_name for r in self.select("select table_name from information_schema.tables")]
+        return names
+
     def table_exists(self, table_name):
         sn = self.servername().lower()
         if 'sqlite' in sn:
