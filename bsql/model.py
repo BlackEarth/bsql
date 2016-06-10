@@ -321,11 +321,8 @@ class Model(Record):
 
         self.before_insert_or_update()
         self.before_update()
-        # join pk to indicate which record to update.
-        pl = []
-        for k in self.pk:
-            pl.append("%s=%s" % (k, self.quote(self[k])))
-        where = ' and '.join(pl)
+
+        vals = []
 
         # update the local copy of any attribute with the given arg.
         for k in list(kwargs.keys()):
@@ -342,11 +339,19 @@ class Model(Record):
             # By default, only update fields that are not pk.
             # But if the fields to update have been specified, try updating all of them.
             if k not in self.pk or fields != []:
-                al.append("%s=%s" % (k, self.quote(self[k])))     # append to attribute list
+                al.append("%s=%%s" % (k))     # append to attribute list
+                vals.append(self[k])
+
+        # join pk to indicate which record to update.
+        pl = []
+        for k in self.pk:
+            pl.append("%s=%%s" % (k))
+            vals.append(self[k])
+        where = ' and '.join(pl)
 
         # perform the update
         sql = "update %s set %s where %s" % (self.relation, ', '.join(al), where)
-        self.db.execute(sql, cursor=cursor)
+        self.db.execute(sql, vals=vals, cursor=cursor)
         
         self.after_update()
         self.after_insert_or_update()
