@@ -30,26 +30,28 @@ from bl.log import Log
 class Database(Dict):
     """a database connection object."""
 
-    def __init__(self, connection_string=None, dba=None, connection=None, tries=3, debug=False, log=Log(), **args):
+    def __init__(self, connection_string=None, adaptor=None, connection=None, 
+                tries=3, debug=False, log=Log(), **args):
         Dict.__init__(self, 
             connection_string=re.sub('\s+', ' ', connection_string or ''),
             connection=connection,
-            dba=dba, 
+            adaptor=adaptor, 
             debug=debug, tries=tries, log=log, **args)
         if self.connection is not None:
-            self.dba = self.connection.__module__
-        elif self.dba is None:
+            self.adaptor = self.connection.__module__
+        elif self.adaptor is None:
             import sqlite3
-            self.dba = sqlite3
-        elif type(self.dba) in (str, bytes):
-            fm = imp.find_module(dba)
-            self.dba = imp.load_module(self.dba, fm[0], fm[1], fm[2])
+            self.adaptor = sqlite3
+        elif type(self.adaptor) in (str, bytes):
+            fm = imp.find_module(adaptor)
+            self.adaptor = imp.load_module(self.adaptor, fm[0], fm[1], fm[2])
+        print(self.adaptor)
 
-        # if self.dba.__module__ == 'psycopg2':
+        # if self.adaptor.__module__ == 'psycopg2':
         #     # make psycopg2 always return unicode strings
         #     try:
-        #         dba.extensions.register_type(dba.extensions.UNICODE)
-        #         dba.extensions.register_type(dba.extensions.UNICODEARRAY)                    
+        #         adaptor.extensions.register_type(adaptor.extensions.UNICODE)
+        #         adaptor.extensions.register_type(adaptor.extensions.UNICODEARRAY)                    
         #     except:
         #         # if that didn't work for some reason, then just go with the default setup.
         #         pass
@@ -59,11 +61,11 @@ class Database(Dict):
             for i in range(tries):
                 try: 
                     if self.connection_string != None:
-                        print(dba.connect, self.connection_string)
-                        self.connection = self.dba.connect(self.connection_string)
+                        print(adaptor.connect, self.connection_string)
+                        self.connection = self.adaptor.connect(self.connection_string)
                     else:
-                        print(dba.connect, args)
-                        self.connection = self.dba.connect(**args)
+                        print(adaptor.connect, args)
+                        self.connection = self.adaptor.connect(**args)
                     break
                 except: 
                     if i==list(range(tries))[-1]:       # last try failed
@@ -71,13 +73,13 @@ class Database(Dict):
                     else:                               # wait a bit
                         time.sleep(2*i)                 # doubling the time on each wait
         try:
-            if self.dba == 'sqlite3' or self.dba.__module__ == 'sqlite3':
+            if self.adaptor == 'sqlite3' or self.adaptor.__module__ == 'sqlite3':
                 self.execute("pragma foreign_keys = ON")
         except:
             pass
 
     def __repr__(self):
-        return "Database(dba=%s, connection_string='%s')" % (self.dba, self.connection_string)
+        return "Database(adaptor=%s, connection_string='%s')" % (self.adaptor, self.connection_string)
 
     def migrate(self, migrations=None):
         from .migration import Migration
@@ -216,11 +218,11 @@ class Database(Dict):
 
     def servername(self):
         """return a string that describes the database server being used"""
-        if type(self.dba) in [str, bytes]:
-            return self.dba
-        elif 'psycopg' in self.dba.__module__: 
+        if type(self.adaptor) in [str, bytes]:
+            return self.adaptor
+        elif 'psycopg' in self.adaptor.__module__: 
             return 'postgresql'
-        elif 'sqlite' in self.dba.__module__: 
+        elif 'sqlite' in self.adaptor.__module__: 
             return 'sqlite'
         elif self.dbconfig is not None and self.dbconfig.server is not None:
             return self.dbconfig.server
