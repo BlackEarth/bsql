@@ -45,8 +45,7 @@ class Database(Dict):
         elif type(self.adaptor) in (str, bytes):
             fm = imp.find_module(adaptor)
             self.adaptor = imp.load_module(self.adaptor, fm[0], fm[1], fm[2])
-        print(self.adaptor)
-
+        
         # if self.adaptor.__module__ == 'psycopg2':
         #     # make psycopg2 always return unicode strings
         #     try:
