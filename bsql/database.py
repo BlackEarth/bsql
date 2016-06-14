@@ -61,11 +61,9 @@ class Database(Dict):
             for i in range(tries):
                 try: 
                     if self.connection_string != None:
-                        print(adaptor.connect, self.connection_string)
-                        self.connection = self.adaptor.connect(self.connection_string)
+                         self.connection = self.adaptor.connect(self.connection_string)
                     else:
-                        print(adaptor.connect, args)
-                        self.connection = self.adaptor.connect(**args)
+                         self.connection = self.adaptor.connect(**args)
                     break
                 except: 
                     if i==list(range(tries))[-1]:       # last try failed
