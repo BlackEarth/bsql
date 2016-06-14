@@ -71,7 +71,7 @@ class Database(Dict):
                     else:                               # wait a bit
                         time.sleep(2*i)                 # doubling the time on each wait
         try:
-            if self.adaptor == 'sqlite3' or self.adaptor.__module__ == 'sqlite3':
+            if self.adaptor == 'sqlite3' or 'sqlite3' in str(self.adaptor):
                 self.execute("pragma foreign_keys = ON")
         except:
             pass
@@ -218,9 +218,9 @@ class Database(Dict):
         """return a string that describes the database server being used"""
         if type(self.adaptor) in [str, bytes]:
             return self.adaptor
-        elif 'psycopg' in self.adaptor.__module__: 
+        elif 'psycopg' in str(self.adaptor):
             return 'postgresql'
-        elif 'sqlite' in self.adaptor.__module__: 
+        elif 'sqlite' in str(self.adaptor):
             return 'sqlite'
         elif self.dbconfig is not None and self.dbconfig.server is not None:
             return self.dbconfig.server
