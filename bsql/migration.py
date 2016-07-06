@@ -1,9 +1,16 @@
 
 import os, traceback
 from glob import glob
+from bl.dict import Dict
 from bl.log import Log
 
 from .model import Model
+
+class Migrate(Dict):
+    def __init__(self, db, log=Log(), **Database):
+        super().__init__(db=db, log=log, **Database)
+    def __call__(self):
+        Migration.migrate(self.db, path=self.migrations, log=self.log)
 
 class Migration(Model):
     relation = 'migrations'
