@@ -7,6 +7,7 @@ from bl.dict import Dict
 from bl.string import String
 
 from .record import Record
+from .recordset import RecordSet
 
 class Model(Record):
     """abstract base class for database models to inherit from, holds shared functionality.
@@ -98,7 +99,7 @@ class Model(Record):
         """return a set of records from a foreign class that key to this instance."""
         # make sure we have a valid record
         for k in self.pk:
-            if self.get(k) is None: return []
+            if self.get(k) is None: return RecordSet()
         
         if self_key is None: self_key = self.pk
         if foreign_key is None: 
@@ -106,7 +107,7 @@ class Model(Record):
         if cache_field is None: cache_field = other_class.__name__
 
         for k in self_key:
-            if self.get(k) is None: return []
+            if self.get(k) is None: return RecordSet()
 
         if update==True or self.__dict__.get(cache_field)==None:
             # get the records from the database, however many there are
@@ -122,8 +123,11 @@ class Model(Record):
                 selexpr = """other_class(self.db).select(where="%s", orderby="%s", **kwargs)""" % (wherecl, orderby)
             else:
                 selexpr = """other_class(self.db).select(where="%s", **kwargs)""" % (wherecl)
-            self.__dict__[cache_field] = eval(selexpr) or []
-        return self.__dict__[cache_field] or []
+            self.__dict__[cache_field] = eval(selexpr) or RecordSet()
+        rs = RecordSet()
+        for r in self.__dict__[cache_field] or []:
+            rs.append(r)
+        return rs
 
     def to_many_through(self, other_class, through_relation, through_fields, 
                         self_key=None, foreign_key=None, to_fields=['*'], 
@@ -133,7 +137,7 @@ class Model(Record):
         through a relationship table."""
         # make sure we have a valid record
         for k in self.pk:
-            if self.get(k) is None: return []
+            if self.get(k) is None: return RecordSet()
         
         if self_key is None: self_key = self.pk
         if foreign_key is None: 
@@ -141,7 +145,7 @@ class Model(Record):
         if cache_field is None: cache_field = other_class.__name__
         
         for k in self_key:
-            if self.get(k) is None: return []
+            if self.get(k) is None: return RecordSet()
 
         if update==True or self.__dict__.get(cache_field)==None:
             # add the relation names to the field names in each field list -- avoid ambiguity in the query
@@ -172,8 +176,11 @@ class Model(Record):
                 sql += " offset %d " % offset
             
             # select and cache the data
-            self.__dict__[cache_field] = self.db.select(sql, Record=other_class)
-        return self.__dict__[cache_field] or []
+            self.__dict__[cache_field] = self.db.elect(sql, Record=other_class)
+        rs = RecordSet()
+        for r in self.__dict__[cache_field] or RecordSet():
+            rs.append(r)
+        return rs
 
     def prepare_query(self, attr='*', from_expr=None, where="", vals=None, orderby="", limit=None, offset=0, **kwargs):
         if from_expr is None: from_expr = self.relation
@@ -210,7 +217,7 @@ class Model(Record):
         """select records from relation"""
         sql = self.prepare_query(attr=attr, from_expr=from_expr, where=where, vals=vals, orderby=orderby, limit=limit, offset=offset, **kwargs)
         records = self.db.selectgen(sql, vals=vals, Record=self.__class__, cursor=cursor)
-        results = []
+        results = RecordSet()
         for result in records:
             result.after_select()
             results.append(result)
