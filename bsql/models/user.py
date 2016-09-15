@@ -19,8 +19,6 @@ class User(Model):
         errors = []
         C = self.__class__
 
-        if self.db.DEBUG==True: self.db.log(self)
-
         if self.password is None or self.password.strip()=='': 
             self.password = C.random_password()
             autogen = True

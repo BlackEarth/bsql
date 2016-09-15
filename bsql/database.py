@@ -9,7 +9,7 @@ Designed to be small, fast, and transparent. Integrates with user-defined record
 
 ---------------------------------------------------------------------------
                                             Memory:  Footprint:
-# > python                                  4656 K   4656 K (Python 3.4.3 osx)
+# > python                                  4656 K   4656 K (Python 3.4.3 OSX)
 # >>> from bl.database import Database      5460 K    804 K (YMMV)
 ---------------------------------------------------------------------------
 Sample session: 
@@ -23,20 +23,21 @@ Sample session:
 >>>
 """
 
-import datetime, imp, re, time
+import datetime, imp, re, time, logging
 from bl.dict import Dict
-from bl.log import Log
+
+LOG = logging.getLogger(__name__)
 
 class Database(Dict):
     """a database connection object."""
 
     def __init__(self, connection_string=None, adaptor=None, connection=None, 
-                tries=3, debug=False, log=Log(), **args):
+                tries=3, debug=False, **args):
         Dict.__init__(self, 
             connection_string=re.sub('\s+', ' ', connection_string or ''),
             connection=connection,
             adaptor=adaptor, 
-            debug=debug, tries=tries, log=log, **args)
+            debug=debug, tries=tries, **args)
         if self.connection is not None:
             self.adaptor = self.connection.__module__
         elif self.adaptor is None:
@@ -46,15 +47,6 @@ class Database(Dict):
             fm = imp.find_module(adaptor)
             self.adaptor = imp.load_module(self.adaptor, fm[0], fm[1], fm[2])
         
-        # if self.adaptor.__module__ == 'psycopg2':
-        #     # make psycopg2 always return unicode strings
-        #     try:
-        #         adaptor.extensions.register_type(adaptor.extensions.UNICODE)
-        #         adaptor.extensions.register_type(adaptor.extensions.UNICODEARRAY)                    
-        #     except:
-        #         # if that didn't work for some reason, then just go with the default setup.
-        #         pass
-            
         # try reaching the db "tries" times, with increasing wait times, before raising an exception.
         if self.connection is None:
             for i in range(tries):
@@ -80,7 +72,7 @@ class Database(Dict):
 
     def migrate(self, migrations=None):
         from .migration import Migration
-        Migration.migrate(self, migrations_path=migrations or self.migrations, log=self.log)
+        Migration.migrate(self, migrations_path=migrations or self.migrations)
 
     def cursor(self):
         """get a cursor for fine-grained transaction control."""
@@ -91,7 +83,7 @@ class Database(Dict):
         """execute SQL transaction, commit it, and return nothing. 
         If a cursor is specified, work within that transaction.
         """
-        if self.debug==True: self.log(sql, vals or [])
+        LOG.debug("%s %r" % (sql, vals))
         try:
             c = cursor or self.connection.cursor()
             if vals in [None, (), [], {}]:

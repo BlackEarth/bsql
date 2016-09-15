@@ -1,16 +1,17 @@
 
-import os, traceback
+import os, traceback, logging
 from glob import glob
 from bl.dict import Dict
-from bl.log import Log
 
 from .model import Model
 
+LOG = logging.getLogger(__name__)
+
 class Migrate(Dict):
-    def __init__(self, db, log=Log(), **Database):
-        super().__init__(db=db, log=log, **Database)
+    def __init__(self, db, **Database):
+        super().__init__(db=db, **Database)
     def __call__(self):
-        Migration.migrate(self.db, path=self.migrations, log=self.log)
+        Migration.migrate(self.db, path=self.migrations)
 
 class Migration(Model):
     relation = 'migrations'
@@ -21,7 +22,7 @@ class Migration(Model):
         return os.path.basename(os.path.splitext(filename)[0])
 
     @classmethod
-    def migrate(M, db, path=None, log=Log()):
+    def migrate(M, db, path=None):
         """update the database with unapplied migrations"""
         path = path or db.migrations
         try:
@@ -34,7 +35,7 @@ class Migration(Model):
                 in glob(os.path.join(path, "*.*")) 
                 if M.create_id(fn) not in migrations_ids]
         fns.sort()
-        log("[%s]" % log.timestamp(), "Migrate Database: %d migrations" % len(fns))
+        LOG.info("Migrate Database: %d migrations" % (len(fns),))
         for fn in fns:
             id = M.create_id(fn)
             ext = os.path.splitext(fn)[1]
@@ -43,7 +44,7 @@ class Migration(Model):
             else:
                 f = open(fn, 'r'); script = f.read(); f.close()
                 description = script.split("\n")[0].strip('-#/*; ') # first line is the description
-                log('', id+ext, ':', description)
+                LOG.info('', id+ext, ':', description)
                 cursor = db.cursor()
                 try:
                     if ext=='.sql':                                     # script is a SQL script, db.execute it
