@@ -192,9 +192,9 @@ class Model(Record):
             sql += " where %s " % self.where_from_args(where, **kwargs)
 
         if orderby not in ["", None]:
-            sql += """ order by "%s" """ % orderby
+            sql += """ order by %s """ % orderby
         elif len(self.pk) > 0:       # default to using pk for orderby
-            sql += """ order by "%s" """ % '","'.join(self.pk)
+            sql += """ order by %s """ % '","'.join(self.pk)
         if limit not in [0, None] and self.db.servername() != 'sqlserver': 
             sql += " limit %d" % int(limit)
 
@@ -371,11 +371,11 @@ class Model(Record):
             return sys.exc_info()[1].args[0]        
 
     def insert_or_update(self, reload=True, cursor=None, **kwargs):
-        r = self.select_one(**{k:self[k] for k in self.pk})
-        if r is None:
-            self.insert(reload=reload, cursor=cursor, **kwargs)
-        else:
+        pksel = {k:self.get(k) for k in self.pk}
+        if None not in pksel.values() and self.select_one(**pksel) is not None:
             self.commit(reload=reload, cursor=cursor, **kwargs)
+        else:
+            self.insert(reload=reload, cursor=cursor, **kwargs)
 
     def delete(self, where=None, vals=None, cursor=None):
         """delete the current instance from its relation -- must be up-to-date to do w/o where clause."""
