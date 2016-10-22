@@ -11,7 +11,7 @@ class Migrate(Dict):
     def __init__(self, db, **Database):
         super().__init__(db=db, **Database)
     def __call__(self):
-        Migration.migrate(self.db, path=self.migrations)
+        Migration.migrate(self.db, migrations=self.migrations)
 
 class Migration(Model):
     relation = 'migrations'
@@ -22,9 +22,9 @@ class Migration(Model):
         return os.path.basename(os.path.splitext(filename)[0])
 
     @classmethod
-    def migrate(M, db, path=None):
+    def migrate(M, db, migrations=None):
         """update the database with unapplied migrations"""
-        path = path or db.migrations
+        migrations = migrations or db.migrations
         try:
             # will throw an error if this is the first migration -- migrations table doesn't yet exist.
             # (and this approach is a bit easier than querying for the existence of the table...)
@@ -32,7 +32,7 @@ class Migration(Model):
         except:
             migrations_ids = []
         fns = [fn for fn 
-                in glob(os.path.join(path, "*.*")) 
+                in glob(os.path.join(migrations, "*.*")) 
                 if M.create_id(fn) not in migrations_ids]
         fns.sort()
         LOG.info("Migrate Database: %d migrations" % (len(fns),))

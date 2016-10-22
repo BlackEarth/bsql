@@ -72,7 +72,7 @@ class Database(Dict):
 
     def migrate(self, migrations=None):
         from .migration import Migration
-        Migration.migrate(self, migrations_path=migrations or self.migrations)
+        Migration.migrate(self, migrations=migrations or self.migrations)
 
     def cursor(self):
         """get a cursor for fine-grained transaction control."""
