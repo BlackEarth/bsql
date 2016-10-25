@@ -3,6 +3,7 @@ DEBUG = True
 
 import datetime
 import datetime, re, sys
+from bl.id import random_id
 from bl.dict import Dict
 from bl.string import String
 
@@ -176,7 +177,7 @@ class Model(Record):
                 sql += " offset %d " % offset
             
             # select and cache the data
-            self.__dict__[cache_field] = self.db.elect(sql, Record=other_class)
+            self.__dict__[cache_field] = self.db.select(sql, Record=other_class)
         rs = RecordSet()
         for r in self.__dict__[cache_field] or RecordSet():
             rs.append(r)
@@ -194,7 +195,7 @@ class Model(Record):
         if orderby not in ["", None]:
             sql += """ order by %s """ % orderby
         elif len(self.pk) > 0:       # default to using pk for orderby
-            sql += """ order by %s """ % '","'.join(self.pk)
+            sql += """ order by %s """ % ', '.join(self.pk)
         if limit not in [0, None] and self.db.servername() != 'sqlserver': 
             sql += " limit %d" % int(limit)
 

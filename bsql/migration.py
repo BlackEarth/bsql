@@ -1,5 +1,5 @@
 
-import os, traceback, logging
+import os, subprocess, traceback, logging
 from glob import glob
 from bl.dict import Dict
 
