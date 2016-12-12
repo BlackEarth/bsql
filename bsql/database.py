@@ -83,7 +83,8 @@ class Database(Dict):
         """execute SQL transaction, commit it, and return nothing. 
         If a cursor is specified, work within that transaction.
         """
-        if self.debug!=False: LOG.debug("%s %r" % (sql, vals))
+        if self.debug!=False: 
+            LOG.debug("%s %r" % (sql, vals))
         try:
             c = cursor or self.connection.cursor()
             if vals in [None, (), [], {}]:

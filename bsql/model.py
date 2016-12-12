@@ -142,7 +142,7 @@ class Model(Record):
         
         if self_key is None: self_key = self.pk
         if foreign_key is None: 
-            foreign_key = ["%s_%s" % (self.__class__.__name__.lower(), fk) for fk in self.pk]
+            foreign_key = other_class.pk
         if cache_field is None: cache_field = other_class.__name__
         
         for k in self_key:
