@@ -1,14 +1,14 @@
 
 config = {
   "name": "bsql",
-  "version": "0.8.1",
+  "version": "0.9.0",
   "description": "Black Earth’s SQL Database Interface Library",
   "url": "https://github.com/BlackEarth/bsql",
   "author": "Sean Harrison",
   "author_email": "sah@blackearthgroup.com",
   "license": "LGPL 3.0",
   "classifiers": [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: GNU Library or Lesser General Public License (LGPL)",
     "Programming Language :: Python :: 3"
