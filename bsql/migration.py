@@ -29,6 +29,7 @@ class Migration(Model):
             # will throw an error if this is the first migration -- migrations table doesn't yet exist.
             # (and this approach is a bit easier than querying for the existence of the table...)
             migrations_ids = [r.id for r in M(db).select()]
+            LOG.debug("migrations_ids = " + str(migrations_ids))
         except:
             migrations_ids = []
         fns = [fn for fn 
@@ -38,13 +39,14 @@ class Migration(Model):
         LOG.info("Migrate Database: %d migrations" % (len(fns),))
         for fn in fns:
             id = M.create_id(fn)
+            LOG.debug(id + ': ' + fn)
             ext = os.path.splitext(fn)[1]
             if id in migrations_ids: 
                 continue
             else:
                 f = open(fn, 'r'); script = f.read(); f.close()
                 description = script.split("\n")[0].strip('-#/*; ') # first line is the description
-                LOG.info('', id+ext, ':', description)
+                LOG.info(id+ext + ': ' + description)
                 cursor = db.cursor()
                 try:
                     if ext=='.sql':                                     # script is a SQL script, db.execute it
