@@ -427,6 +427,22 @@ class Model(Record):
             record[tag] = ch.text
         return record
 
+    @classmethod
+    def xml(Class, record, builder=None):
+        if builder is None: builder = Builder()._
+        elem = builder(Class.relation, **{k:str(record[k]) for k in Class.pk})
+        for k in [k for k in record.keys() if k not in Class.pk]:
+            elem.append(builder(k, str(record[k] or '')))
+        return elem
+        
+    @classmethod
+    def xml_set(Class, recordset, builder=None):
+        if builder is None: builder = Builder()._
+        root = builder(Class.relation + '-set')
+        for record in recordset: 
+            root.append(Class.xml(record, builder=builder))
+        return root
+
 
 
 
