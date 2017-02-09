@@ -1,7 +1,7 @@
 
 config = {
   "name": "bsql",
-  "version": "0.9.1",
+  "version": "0.10.0",
   "description": "Black Earth’s SQL Database Interface Library",
   "url": "https://github.com/BlackEarth/bsql",
   "author": "Sean Harrison",
@@ -14,7 +14,7 @@ config = {
     "Programming Language :: Python :: 3"
   ],
   "entry_points": {},
-  "install_requires": ["bl"],
+  "install_requires": ["bl", "bxml"],
   "extras_require": {
     "dev": [],
     "test": []
