@@ -1,6 +1,9 @@
 
 DEBUG = True
 
+import logging
+LOG = logging.getLogger(__name__)
+
 import datetime
 import datetime, re, sys
 from bl.id import random_id
@@ -187,12 +190,16 @@ class Model(Record):
 
     def prepare_query(self, attr='*', from_expr=None, where="", vals=None, orderby="", limit=None, offset=0, **kwargs):
         if from_expr is None: from_expr = self.relation
+        if vals is None: vals = []
         if limit not in [0, None] and self.db.servername() == 'sqlserver':
             sql = "select top %d %s from %s" % (limit, attr, from_expr)
         else:
             sql = "select %s from %s" % (attr, from_expr)
         if where not in ["", None] or len(kwargs)>0: 
-            sql += " where %s " % self.where_from_args(where, **kwargs)
+            wheresql, wherevals = self.where_from_args(where, **kwargs)
+            if wheresql != "":
+                sql += " where " + wheresql
+                vals += wherevals
 
         if orderby not in ["", None]:
             sql += """ order by %s """ % orderby
@@ -206,11 +213,11 @@ class Model(Record):
                 sql += " offset %d " % offset
             elif type(offset) in [str, str] and re.match("[0-9]+", offset) is not None:
                 sql += " offset %s " % offset
-        return sql
+        return sql, vals
 
     def selectgen(self, attr='*', from_expr=None, where="", vals=None, orderby="", limit=None, offset=0, cursor=None, **kwargs):
         """select records from relation"""
-        sql = self.prepare_query(attr=attr, from_expr=from_expr, where=where, vals=vals, orderby=orderby, limit=limit, offset=offset, **kwargs)
+        sql, vals = self.prepare_query(attr=attr, from_expr=from_expr, where=where, vals=vals, orderby=orderby, limit=limit, offset=offset, **kwargs)
         results = self.db.selectgen(sql, vals=vals, Record=self.__class__, cursor=cursor)
         for result in results:
             result.after_select()
@@ -218,7 +225,7 @@ class Model(Record):
 
     def select(self, attr='*', from_expr=None, where="", vals=None, orderby="", limit=None, offset=0, cursor=None, **kwargs):
         """select records from relation"""
-        sql = self.prepare_query(attr=attr, from_expr=from_expr, where=where, vals=vals, orderby=orderby, limit=limit, offset=offset, **kwargs)
+        sql, vals = self.prepare_query(attr=attr, from_expr=from_expr, where=where, vals=vals, orderby=orderby, limit=limit, offset=offset, **kwargs)
         records = self.db.selectgen(sql, vals=vals, Record=self.__class__, cursor=cursor)
         results = RecordSet()
         for result in records:
@@ -245,10 +252,13 @@ class Model(Record):
             
     def where_from_args(self, where=None, **kwargs):
         wherelist=[]
+        wherevals = []
         if where!='' and where is not None: wherelist.append(where)
         for k in kwargs:
-            wherelist.append("%s=%s" % (k, self.quote(kwargs[k])))
-        return " and ".join(wherelist)  # returns empty string if no kwargs given
+            wherelist.append("%s=%%s" % k)
+            wherevals.append(kwargs[k])
+        wheresql = " and ".join(wherelist)
+        return  wheresql, wherevals
 
     def pk_as_tuple(self):
         """return a tuple with the values of self.pk -- can be used as a dict key."""
@@ -271,10 +281,10 @@ class Model(Record):
         self.before_insert()
         keys = self.keys()
         vals = self.values()
-        if 'postgres' in self.db.servername().lower():
-            vals_markers = ["%s" for v in vals]
-        else:
+        if 'sqlite' in self.db.servername().lower():
             vals_markers = ["?" for v in vals]
+        else:
+            vals_markers = ["%s" for v in vals]
         q = "insert into %s (%s) values (%s)" % (
                 self.relation, ','.join(keys), ','.join(vals_markers))
         if 'postgres' in self.db.servername().lower(): 
@@ -292,7 +302,7 @@ class Model(Record):
                     whereargs[k] = self.get(k)
                 wherecl = self.where_from_args(**whereargs)
                 d = self.db.select_one("select * from %s where %s" % (self.relation, wherecl))
-            for k in list(d.keys()): self[k] = d[k]
+            for k in list((d or {}).keys()): self[k] = d[k]
         if cursor is None:
             self.db.commit()
         self.after_insert()
