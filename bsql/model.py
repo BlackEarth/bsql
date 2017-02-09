@@ -6,6 +6,8 @@ import datetime, re, sys
 from bl.id import random_id
 from bl.dict import Dict
 from bl.string import String
+from bxml.xml import XML, etree
+from bxml.builder import Builder
 
 from .record import Record
 from .recordset import RecordSet
@@ -62,19 +64,19 @@ class Model(Record):
         if self.relation is None: 
             self.__dict__['relation'] = String(self.__class__.__name__).identifier().lower() + 's'
 
-    def to_one(self, other_class, to_fields=['*'], foreign_key=None, other_key=None, 
+    def to_one(self, other_class, to_fields=['*'], self_key=None, other_key=None, 
                      update=False, cache_field=None, orderby=None, **kwargs):
         """returns a record based on the fk fields in this relation."""
         # make sure we have a valid record
         for k in self.pk:
             if self.get(k) is None: return None
         
-        if foreign_key is None: 
-            foreign_key = ["%s_%s" % (other_class.__name__.lower(), fk) for fk in other_class.pk]
+        if self_key is None: 
+            self_key = ["%s_%s" % (other_class.__name__.lower(), fk) for fk in other_class.pk]
         if other_key is None: other_key = other_class.pk
         if cache_field is None: cache_field = other_class.__name__
 
-        for k in foreign_key:
+        for k in self_key:
             if self.get(k) is None: return None
 
         if update==True or self.__dict__.get(cache_field)==None:
@@ -82,7 +84,7 @@ class Model(Record):
             wherelist = []
             if self.where is not None: 
                 wherelist += [self.where]
-            fields = list(zip(foreign_key, other_key))
+            fields = list(zip(self_key, other_key))
             for field in fields:
                 wherelist.append("%s=%s" % (field[1], self.quote(self[field[0]])))
             wherecl = " and ".join(wherelist)
@@ -95,7 +97,7 @@ class Model(Record):
         return self.__dict__[cache_field]
 
     def to_many(self, other_class, 
-                self_key=None, foreign_key=None, update=False, cache_field=None, 
+                self_key=None, other_key=None, update=False, cache_field=None, 
                 orderby=None, where=None, **kwargs):
         """return a set of records from a foreign class that key to this instance."""
         # make sure we have a valid record
@@ -103,8 +105,8 @@ class Model(Record):
             if self.get(k) is None: return RecordSet()
         
         if self_key is None: self_key = self.pk
-        if foreign_key is None: 
-            foreign_key = ["%s_%s" % (self.__class__.__name__.lower(), fk) for fk in self.pk]
+        if other_key is None: 
+            other_key = ["%s_%s" % (self.__class__.__name__.lower(), fk) for fk in self.pk]
         if cache_field is None: cache_field = other_class.__name__
 
         for k in self_key:
@@ -114,7 +116,7 @@ class Model(Record):
             # get the records from the database, however many there are
             wherelist = []
             if self.where is not None: wherelist += [self.where]
-            fields = list(zip(self_key, foreign_key))
+            fields = list(zip(self_key, other_key))
             for field in fields:
                 wherelist.append(" %s=%s " % (field[1], self.quote(self[field[0]])))
             wherecl = " and ".join(wherelist)
@@ -131,7 +133,7 @@ class Model(Record):
         return rs
 
     def to_many_through(self, other_class, through_relation, through_fields, 
-                        self_key=None, foreign_key=None, to_fields=['*'], 
+                        self_key=None, other_key=None, to_fields=['*'], 
                         also_select=[], cache_field=None, update=False, 
                         orderby=None, where=None, limit=None, offset=0, **kwargs):
         """return a set of records from a foreign class that key to this instance, 
@@ -141,8 +143,8 @@ class Model(Record):
             if self.get(k) is None: return RecordSet()
         
         if self_key is None: self_key = self.pk
-        if foreign_key is None: 
-            foreign_key = other_class.pk
+        if other_key is None: 
+            other_key = other_class.pk
         if cache_field is None: cache_field = other_class.__name__
         
         for k in self_key:
@@ -151,12 +153,12 @@ class Model(Record):
         if update==True or self.__dict__.get(cache_field)==None:
             # add the relation names to the field names in each field list -- avoid ambiguity in the query
             self_key = ["%s.%s" % (self.relation, field) for field in self_key]
-            foreign_key = ["%s.%s" % (other_class.relation, field) for field in foreign_key]
+            other_key = ["%s.%s" % (other_class.relation, field) for field in other_key]
             through_fields = ["%s.%s" % (through_relation, field) for field in through_fields]
 
             # create lists for the inner joins
             onself = [" %s=%s " % field for field in zip(self_key, through_fields)]                      # uses the first set of fields in through_fields
-            onforeign = [" %s=%s " % field for field in zip(foreign_key, through_fields[len(onself):])]  # uses the rest of the fields in through_fields
+            onforeign = [" %s=%s " % field for field in zip(other_key, through_fields[len(onself):])]  # uses the rest of the fields in through_fields
 
             # build the query
             sql = "select " + ", ".join(["%s.%s" % (other_class.relation, field) for field in to_fields])
