@@ -83,14 +83,10 @@ class Database(Dict):
         """execute SQL transaction, commit it, and return nothing. 
         If a cursor is specified, work within that transaction.
         """
-        if self.debug!=False: 
-            LOG.debug("%s %r" % (sql, vals))
+        LOG.debug("%r vals=%r" % (sql, vals))
         try:
             c = cursor or self.connection.cursor()
-            if vals in [None, (), [], {}]:
-                c.execute(sql)
-            else:
-                c.execute(sql, vals)
+            c.execute(sql, vals or [])
             if cursor is None:
                 self.commit()
         except:
@@ -193,12 +189,11 @@ class Database(Dict):
     def _quote_str(self, attr):
         """quote the attr string in a manner fitting the Database server, if known."""
         sn = self.servername().lower()
-        if 'sqlserver' in sn or 'sqlite' in sn:
+        if 'sqlserver' in sn or 'sqlite' in sn or 'mysql' in sn:
             # quote for sqlserver and sqlite: double '' to escape
-            attr = "'" + re.sub("'", "''", attr) + "'"
+            attr = "'%s'" % re.sub("'", "''", attr)
         elif 'postgres' in sn:
-            if type(attr) == str:
-                attr = "$$%s$$" % attr
+            attr = "$$%s$$" % attr
         else:
             if type(attr) == str:
                 attr = "'%s'" % attr
