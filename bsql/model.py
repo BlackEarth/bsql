@@ -300,8 +300,8 @@ class Model(Record):
                 whereargs = {}
                 for k in self.pk:
                     whereargs[k] = self.get(k)
-                wherecl = self.where_from_args(**whereargs)
-                d = self.db.select_one("select * from %s where %s" % (self.relation, wherecl))
+                wherecl, wherevals = self.where_from_args(**whereargs)
+                d = self.db.select_one("select * from %s where %s" % (self.relation, wherecl), vals=wherevals)
             for k in list((d or {}).keys()): self[k] = d[k]
         if cursor is None:
             self.db.commit()
