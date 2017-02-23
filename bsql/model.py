@@ -393,16 +393,15 @@ class Model(Record):
     def delete(self, where=None, vals=None, cursor=None):
         """delete the current instance from its relation -- must be up-to-date to do w/o where clause."""
         self.before_delete()
+        if vals is None: vals = []
         if where==None:
-            # use pk to find the appropriate record
-            l=[]
-            for k in self.pk:
-                l.append("%s=%s" % (k, self.quote(self[k])))
-            where=" and ".join(l)
+            where, addvals = self.where_from_args(**{k:self[k] for k in self.pk})
+            vals += addvals
         self.db.execute("delete from %s where %s" % (self.relation, where), vals=vals, cursor=cursor)
         for k in list(self.keys()):
             self.pop(k)
         self.after_delete()
+        del(self)
 
     def delete_safe(self, where=None, vals=None, cursor=None, **args):
         try:

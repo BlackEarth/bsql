@@ -33,7 +33,7 @@ class Migration(Model):
         except:
             migrations_ids = []
         fns = [fn for fn 
-                in glob(os.path.join(migrations, "*.*")) 
+                in glob(os.path.join(migrations, "[0-9]*-*.*"))     # active migrations have SEQ-NAME.*
                 if M.create_id(fn) not in migrations_ids]
         fns.sort()
         LOG.info("Migrate Database: %d migrations" % (len(fns),))
@@ -54,8 +54,8 @@ class Migration(Model):
                     else:                                               # script is system script, subprocess it
                         subprocess.check_output(script, {'db': db})
                     migration = M(db, id=id, description=description)
-                    migration.insert(cursor=cursor)
                     cursor.connection.commit()
+                    migration.insert()
                 except:
                     cursor.connection.rollback()
                     raise
