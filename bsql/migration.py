@@ -36,7 +36,7 @@ class Migration(Model):
                 in glob(os.path.join(migrations, "[0-9]*-*.*"))     # active migrations have SEQ-NAME.*
                 if M.create_id(fn) not in migrations_ids]
         fns.sort()
-        LOG.info("Migrate Database: %d migrations" % (len(fns),))
+        LOG.info("Migrate Database: %d migrations in %r" % (len(fns), migrations))
         for fn in fns:
             id = M.create_id(fn)
             LOG.debug(id + ': ' + fn)
