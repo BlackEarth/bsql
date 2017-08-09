@@ -67,7 +67,7 @@ class Model(Record):
         if self.relation is None: 
             self.__dict__['relation'] = String(self.__class__.__name__).identifier().lower() + 's'
 
-    def to_one(self, other_class, to_fields=['*'], self_key=None, other_key=None, 
+    def to_one(self, other_class, self_key=None, other_key=None, to_fields=['*'], 
                      update=False, cache_field=None, orderby=None, **kwargs):
         """returns a record based on the fk fields in this relation."""
         # make sure we have a valid record

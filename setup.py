@@ -1,7 +1,7 @@
 
 config = {
   "name": "bsql",
-  "version": "0.10.2",
+  "version": "0.11.0",
   "description": "Black Earth’s SQL Database Interface Library",
   "url": "https://github.com/BlackEarth/bsql",
   "author": "Sean Harrison",
