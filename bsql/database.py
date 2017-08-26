@@ -31,7 +31,7 @@ LOG = logging.getLogger(__name__)
 class Database(Dict):
     """a database connection object."""
 
-    def __init__(self, connection_string, adaptor=None, tries=3, minconn=1, maxconn=1, **args):
+    def __init__(self, connection_string, adaptor=None, tries=3, minconn=1, maxconn=1, poolkey=None, **args):
         Dict.__init__(self, connection_string=re.sub('\s+', ' ', connection_string or ''), 
             adaptor=adaptor, tries=tries, minconn=minconn, maxconn=maxconn, **args)
         if self.adaptor is None: 
@@ -44,8 +44,8 @@ class Database(Dict):
             self.adaptor = imp.load_module(self.adaptor, *imp.find_module(self.adaptor))
         
         if self.adaptor.__name__ == 'psycopg2':
-            from psycopg2.pool import PersistentConnectionPool
-            self.psycopg2_pool = PersistentConnectionPool(self.minconn or 1, self.maxconn or 1, self.connection_string)
+            from psycopg2.pool import ThreadedConnectionPool
+            self.pool = ThreadedConnectionPool(self.minconn or 1, self.maxconn or 1, self.connection_string)
         try:
             if self.adaptor == 'sqlite3' or 'sqlite3' in str(self.adaptor):
                 self.execute("pragma foreign_keys = ON")
@@ -58,8 +58,8 @@ class Database(Dict):
     @property
     def connection(self):
         if self.__connection is None:
-            if self.psycopg2_pool is not None:
-                conn = self.psycopg2_pool.getconn()
+            if self.pool is not None:
+                conn = self.pool.getconn(key=self.poolkey or id(self))
             else:
                 for i in range(self.tries):
                     try: 
@@ -71,7 +71,7 @@ class Database(Dict):
                         else:                               # wait a bit
                             time.sleep(2*i)                 # doubling the time on each wait
             self.__connection = conn
-            LOG.warn("connection: %r" % id(conn))
+            LOG.warn("db: %r key: %r pool: %r conn: %r" % (id(self), self.poolkey, id(self.pool), id(conn)))
         return self.__connection
 
     def migrate(self, migrations=None):
