@@ -31,36 +31,21 @@ LOG = logging.getLogger(__name__)
 class Database(Dict):
     """a database connection object."""
 
-    def __init__(self, connection_string=None, adaptor=None, connection=None, 
-                tries=3, debug=False, **args):
-        Dict.__init__(self, 
-            connection_string=re.sub('\s+', ' ', connection_string or ''),
-            connection=connection,
-            adaptor=adaptor, 
-            debug=debug, tries=tries, **args)
-        if self.connection is not None:
-            self.adaptor = self.connection.__module__
-        elif self.adaptor is None:
-            import sqlite3
-            self.adaptor = sqlite3
-        elif type(self.adaptor) in (str, bytes):
-            fm = imp.find_module(adaptor)
-            self.adaptor = imp.load_module(self.adaptor, fm[0], fm[1], fm[2])
+    def __init__(self, connection_string, adaptor=None, tries=3, minconn=1, maxconn=1, **args):
+        Dict.__init__(self, connection_string=re.sub('\s+', ' ', connection_string or ''), 
+            adaptor=adaptor, tries=tries, minconn=minconn, maxconn=maxconn, **args)
+        if self.adaptor is None: 
+            if self.connection is not None:
+                self.adaptor = self.connection.__module__
+            else:
+                import sqlite3
+                self.adaptor = sqlite3
+        if type(self.adaptor) in (str, bytes):
+            self.adaptor = imp.load_module(self.adaptor, *imp.find_module(self.adaptor))
         
-        # try reaching the db "tries" times, with increasing wait times, before raising an exception.
-        if self.connection is None:
-            for i in range(tries):
-                try: 
-                    if self.connection_string != None:
-                         self.connection = self.adaptor.connect(self.connection_string)
-                    else:
-                         self.connection = self.adaptor.connect(**args)
-                    break
-                except: 
-                    if i==list(range(tries))[-1]:       # last try failed
-                        raise
-                    else:                               # wait a bit
-                        time.sleep(2*i)                 # doubling the time on each wait
+        if self.adaptor.__name__ == 'psycopg2':
+            from psycopg2.pool import PersistentConnectionPool
+            self.psycopg2_pool = PersistentConnectionPool(self.minconn or 1, self.maxconn or 1, self.connection_string)
         try:
             if self.adaptor == 'sqlite3' or 'sqlite3' in str(self.adaptor):
                 self.execute("pragma foreign_keys = ON")
@@ -69,6 +54,25 @@ class Database(Dict):
 
     def __repr__(self):
         return "Database(adaptor=%s, connection_string='%s')" % (self.adaptor, self.connection_string)
+
+    @property
+    def connection(self):
+        if self.__connection is not None:
+            return self.__connection
+        if self.psycopg2_pool is not None:
+            conn = self.psycopg2_pool.getconn()
+        else:
+            for i in range(self.tries):
+                try: 
+                    conn = self.adaptor.connect(self.connection_string)
+                    break
+                except: 
+                    if i==list(range(self.tries))[-1]:       # last try failed
+                        raise
+                    else:                               # wait a bit
+                        time.sleep(2*i)                 # doubling the time on each wait
+        self.__connection = conn
+        return conn
 
     def migrate(self, migrations=None):
         from .migration import Migration
