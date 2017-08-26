@@ -57,22 +57,22 @@ class Database(Dict):
 
     @property
     def connection(self):
-        if self.__connection is not None:
-            return self.__connection
-        if self.psycopg2_pool is not None:
-            conn = self.psycopg2_pool.getconn()
-        else:
-            for i in range(self.tries):
-                try: 
-                    conn = self.adaptor.connect(self.connection_string)
-                    break
-                except: 
-                    if i==list(range(self.tries))[-1]:       # last try failed
-                        raise
-                    else:                               # wait a bit
-                        time.sleep(2*i)                 # doubling the time on each wait
-        self.__connection = conn
-        return conn
+        if self.__connection is None:
+            if self.psycopg2_pool is not None:
+                conn = self.psycopg2_pool.getconn()
+            else:
+                for i in range(self.tries):
+                    try: 
+                        conn = self.adaptor.connect(self.connection_string)
+                        break
+                    except: 
+                        if i==list(range(self.tries))[-1]:       # last try failed
+                            raise
+                        else:                               # wait a bit
+                            time.sleep(2*i)                 # doubling the time on each wait
+            self.__connection = conn
+            LOG.warn("connection: %r" % id(conn))
+        return self.__connection
 
     def migrate(self, migrations=None):
         from .migration import Migration
