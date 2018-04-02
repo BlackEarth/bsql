@@ -1,0 +1,19 @@
+-e git+https://github.com/BlackEarth/bf.git@8595a73b71543f407d51a27ca6318fd383c6c401#egg=bf
+-e git+https://github.com/BlackEarth/bl.git@27708be76b495d476a3de5cb4971fc406b1fbc93#egg=bl
+-e git+https://github.com/BlackEarth/bxml.git@65414564c12ae243c79c3c70b29d76f62b46edeb#egg=bxml
+certifi==2017.11.5
+chardet==3.0.4
+cssselect==1.0.3
+cssutils==1.0.2
+idna==2.6
+libsass==0.13.5
+lxml==4.1.1
+Markdown==2.6.11
+pkginfo==1.4.1
+requests==2.18.4
+requests-toolbelt==0.8.0
+six==1.11.0
+tqdm==4.19.5
+twine==1.9.1
+Unum==4.1.3
+urllib3==1.22
