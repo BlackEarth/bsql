@@ -31,48 +31,49 @@ LOG = logging.getLogger(__name__)
 class Database(Dict):
     """a database connection object."""
 
-    def __init__(self, connection_string, adaptor=None, tries=3, minconn=1, maxconn=1, poolkey=None, **args):
+    def __init__(self, connection_string=None, connection=None, adaptor=None, tries=3, minconn=1, maxconn=1, poolkey=None, **args):
         Dict.__init__(self, connection_string=re.sub('\s+', ' ', connection_string or ''), 
-            adaptor=adaptor, tries=tries, minconn=minconn, maxconn=maxconn, **args)
-        if self.adaptor is None: 
-            if self.connection is not None:
-                self.adaptor = self.connection.__module__
-            else:
-                import sqlite3
-                self.adaptor = sqlite3
-        if type(self.adaptor) in (str, bytes):
-            self.adaptor = imp.load_module(self.adaptor, *imp.find_module(self.adaptor))
-        
-        if self.adaptor.__name__ == 'psycopg2':
-            from psycopg2.pool import ThreadedConnectionPool
-            self.pool = ThreadedConnectionPool(self.minconn or 1, self.maxconn or 1, self.connection_string)
-        try:
-            if self.adaptor == 'sqlite3' or 'sqlite3' in str(self.adaptor):
-                self.execute("pragma foreign_keys = ON")
-        except:
-            pass
+            connection=connection, adaptor=adaptor, tries=tries, minconn=minconn, maxconn=maxconn, **args)
+        if self.connection is None:
+            if self.adaptor is None: 
+                if self.connection is not None:
+                    self.adaptor = self.connection.__module__
+                else:
+                    import sqlite3
+                    self.adaptor = sqlite3
+            if type(self.adaptor) in (str, bytes):
+                self.adaptor = imp.load_module(self.adaptor, *imp.find_module(self.adaptor))
+            
+            if self.adaptor.__name__ == 'psycopg2':
+                from psycopg2.pool import ThreadedConnectionPool
+                self.pool = ThreadedConnectionPool(self.minconn or 1, self.maxconn or 1, self.connection_string)
+            try:
+                if self.adaptor == 'sqlite3' or 'sqlite3' in str(self.adaptor):
+                    self.execute("pragma foreign_keys = ON")
+            except:
+                pass
 
     def __repr__(self):
-        return "Database(adaptor=%s, connection_string='%s')" % (self.adaptor, self.connection_string)
+        return "Database(%s)" % ", ".join(["%s=%r" % (k,v) for k,v in self.items()])
 
-    @property
-    def connection(self):
-        if self.__connection is None:
-            if self.pool is not None:
-                conn = self.pool.getconn(key=self.poolkey or id(self))
-            else:
-                for i in range(self.tries):
-                    try: 
-                        conn = self.adaptor.connect(self.connection_string)
-                        break
-                    except: 
-                        if i==list(range(self.tries))[-1]:       # last try failed
-                            raise
-                        else:                               # wait a bit
-                            time.sleep(2*i)                 # doubling the time on each wait
-            self.__connection = conn
-            LOG.warn("db: %r key: %r pool: %r conn: %r" % (id(self), self.poolkey, id(self.pool), id(conn)))
-        return self.__connection
+    # @property
+    # def connection(self):
+    #     if self.__connection is None:
+    #         if self.pool is not None:
+    #             conn = self.pool.getconn(key=self.poolkey or id(self))
+    #         else:
+    #             for i in range(self.tries):
+    #                 try: 
+    #                     conn = self.adaptor.connect(self.connection_string)
+    #                     break
+    #                 except: 
+    #                     if i==list(range(self.tries))[-1]:       # last try failed
+    #                         raise
+    #                     else:                               # wait a bit
+    #                         time.sleep(2*i)                 # doubling the time on each wait
+    #         self.__connection = conn
+    #         LOG.warn("db: %r key: %r pool: %r conn: %r" % (id(self), self.poolkey, id(self.pool), id(conn)))
+    #     return self.__connection
 
     def migrate(self, migrations=None):
         from .migration import Migration
@@ -87,7 +88,7 @@ class Database(Dict):
         """execute SQL transaction, commit it, and return nothing. 
         If a cursor is specified, work within that transaction.
         """
-        LOG.debug("%r vals=%r" % (sql, vals))
+        LOG.debug("%r, vals=%r" % (sql, vals))
         try:
             c = cursor or self.connection.cursor()
             c.execute(sql, vals or [])
@@ -95,7 +96,7 @@ class Database(Dict):
                 self.commit()
         except:
             if cursor is not None:
-                cursor.connection.rollback()
+                self.rollback()
             raise
 
     def commit(self):
