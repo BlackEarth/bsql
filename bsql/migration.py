@@ -44,7 +44,8 @@ class Migration(Model):
             if id in migrations_ids: 
                 continue
             else:
-                f = open(fn, 'r'); script = f.read(); f.close()
+                with open(fn, 'r') as f:
+                    script = f.read()
                 description = script.split("\n")[0].strip('-#/*; ') # first line is the description
                 LOG.info(id+ext + ': ' + description)
                 cursor = db.cursor()
