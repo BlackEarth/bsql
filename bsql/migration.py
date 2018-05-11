@@ -46,7 +46,12 @@ class Migration(Model):
             else:
                 with open(fn, 'r') as f:
                     script = f.read()
-                description = script.split("\n")[0].strip('-#/*; ') # first line is the description
+                # description: first content line (after hash-bang and blank lines)
+                lines = [l for l in script.split("\n") if l[:2]!='#!' and l.strip()!='']
+                if len(lines) > 0:
+                    description = [0].strip('-#/*; ')
+                else:
+                    description = ''
                 LOG.info(id+ext + ': ' + description)
                 cursor = db.cursor()
                 try:
