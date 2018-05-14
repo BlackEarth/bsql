@@ -49,7 +49,7 @@ class Migration(Model):
                 # description: first content line (after hash-bang and blank lines)
                 lines = [l for l in script.split("\n") if l[:2]!='#!' and l.strip()!='']
                 if len(lines) > 0:
-                    description = [0].strip('-#/*; ')
+                    description = lines[0].strip('-#/*; ')
                 else:
                     description = ''
                 LOG.info(id+ext + ': ' + description)
