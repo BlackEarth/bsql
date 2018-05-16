@@ -2,7 +2,7 @@
 import json, datetime
 class JSONEncoder(json.JSONEncoder):
     def default(self, obj):
-        if isinstance(obj, datetime.datetime):
-            return str(obj)
-        else:
+        try:
             return super().default(obj)
+        except:
+            return str(obj)
