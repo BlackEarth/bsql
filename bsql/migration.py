@@ -39,7 +39,7 @@ class Migration(Model):
         LOG.info("Migrate Database: %d migrations in %r" % (len(fns), migrations))
         for fn in fns:
             id = M.create_id(fn)
-            LOG.debug(id + ': ' + fn)
+            LOG.info(id + ': ' + fn)
             ext = os.path.splitext(fn)[1]
             if id in migrations_ids: 
                 continue
@@ -53,16 +53,14 @@ class Migration(Model):
                 else:
                     description = ''
                 LOG.info(id+ext + ': ' + description)
-                cursor = db.cursor()
-                try:
-                    if ext=='.sql':                                     # script is a SQL script, db.execute it
-                        db.execute(script, cursor=cursor)
-                    else:                                               # script is system script, subprocess it
-                        subprocess.check_output(script, {'db': db})
-                    migration = M(db, id=id, description=description)
+                
+                if ext=='.sql':                                     # script is a SQL script, db.execute it
+                    cursor = db.cursor()
+                    db.execute(script, cursor=cursor)
                     cursor.connection.commit()
-                    migration.insert()
-                except:
-                    cursor.connection.rollback()
-                    raise
-                cursor.close()
+                    cursor.close()
+                else:                                               # script is system script, subprocess it
+                    LOG.info(subprocess.check_output([fn]))
+                migration = M(db, id=id, description=description)
+                migration.insert()
+                
