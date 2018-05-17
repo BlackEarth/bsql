@@ -51,7 +51,7 @@ class Database(Dict):
                 pass
 
     def __repr__(self):
-        return "Database(%s)" % ", ".join(["%s=%r" % (k,v) for k,v in self.items()])
+        return "Database(%s)" % ", ".join(["%s=%r" % (k,v) for k,v in self.items() if k in ['connection_string']])
 
     @property
     def connection(self):
