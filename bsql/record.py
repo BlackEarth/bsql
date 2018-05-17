@@ -13,8 +13,8 @@ class Record(Dict):
 
     def __repr__(self):
         """represent the object in a form that would enable it to be recreated"""
-        sep = '\n    '
-        return "%s(%r%s%s)" % (
+        sep = '\n  '
+        return "%s(%r,%s%s)" % (
             self.__class__.__name__,
             self.__dict__.get('db'),
             sep,
