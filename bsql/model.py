@@ -378,8 +378,6 @@ class Model(Record):
         for i in range(len(keys)):
             self[keys[i]] = vals[i]
 
-        LOG.debug(self)
-        
         self.after_update()
         self.after_insert_or_update()
         if reload==True: self.reload()
