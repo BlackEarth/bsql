@@ -342,25 +342,26 @@ class Model(Record):
         self.before_insert_or_update()
         self.before_update()
 
-        vals = []
+        # start with the list of fields 
+        if fields==[]:
+            keys = self.keys()
+        else:
+            keys = fields
+        vals = [self[k] for k in keys]
 
-        # update the local copy of any attribute with the given arg.
-        for k in list(kwargs.keys()):
-            self[k] = kwargs[k]
+        # merge keys & values from kwargs
+        for k, v in kwargs.items():
+            if k not in keys:
+                keys.append(k)
+                vals.append(v)
+            else:
+                i = keys.index(k)
+                vals[i] = v
 
         # make attribute list
         al = []
-        if fields == []:
-            keys = list(self.keys())
-        else:
-            keys = fields 
-        
         for k in keys:
-            # By default, only update fields that are not pk.
-            # But if the fields to update have been specified, try updating all of them.
-            if k not in self.pk or fields != []:
-                al.append("%s=%%s" % (k))     # append to attribute list
-                vals.append(self[k])
+            al.append("%s=%%s" % (k))
 
         # join pk to indicate which record to update.
         pl = []
@@ -372,6 +373,12 @@ class Model(Record):
         # perform the update
         sql = "update %s set %s where %s" % (self.relation, ', '.join(al), where)
         self.db.execute(sql, vals=vals, cursor=cursor)
+
+        # update the local instance
+        for i in range(len(keys)):
+            self[keys[i]] = vals[i]
+
+        LOG.debug(self)
         
         self.after_update()
         self.after_insert_or_update()
