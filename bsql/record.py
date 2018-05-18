@@ -13,12 +13,19 @@ class Record(Dict):
 
     def __repr__(self):
         """represent the object in a form that would enable it to be recreated"""
-        sep = '\n  '
+        sep = ' '
         return "%s(%r,%s%s)" % (
             self.__class__.__name__,
             self.__dict__.get('db'),
             sep,
             sep.join(["%s=%r" % (k, self.get(k)) for k in self.keys() if self.get(k) is not None]))
+    
+    def __str__(self):
+        sep = '\n\t'
+        return "%s:%s%s" % (
+            self.__class__.__name__,
+            sep,
+            sep.join(["%s: %s" % (k, self.get(k)) for k in self.keys() if self.get(k) is not None]))
 
     def key_tuple(self, key=[]):
         """can be used as a dict key."""
