@@ -124,7 +124,8 @@ class Model(Record):
                 wherelist.append(" %s=%s " % (field[1], self.quote(self[field[0]])))
             wherecl = " and ".join(wherelist)
             if where not in ['', None]: 
-                wherecl += " and %s " % self.where_from_args(where)            
+                LOG.debug("where = %r" % where)
+                wherecl += " and %s " % where
             if orderby is not None:
                 selexpr = """other_class(self.db).select(where="%s", orderby="%s", **kwargs)""" % (wherecl, orderby)
             else:
@@ -173,8 +174,8 @@ class Model(Record):
             sql+= "\n inner join %s on %s" % (through_relation, " and ".join(onforeign))
             sql+= "\n inner join %s on %s" % (self.relation, " and ".join(onself))
             sql+= "\n where %s" % " and ".join(["%s=%s" % (field, self.quote(self[field.split('.')[1]])) for field in self_key])
-            if where not in ['', None] or len(kwargs)>0: 
-                sql += " and %s " % self.where_from_args(where)
+            if where not in ['', None]: 
+                sql += " and %s " % where
             if orderby in ['', None]: orderby = ",".join(other_class.pk)
             sql += "\n order by %s" % orderby            
             if limit not in [0, None]: sql += " limit %d" % int(limit)
