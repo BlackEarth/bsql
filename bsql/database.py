@@ -32,7 +32,7 @@ class Database(Dict):
     """a database connection object."""
 
     def __init__(self, connection_string=None, connection=None, adaptor=None, tries=3, minconn=1, maxconn=1, poolkey=None, **args):
-        Dict.__init__(self, connection_string=re.sub('\s+', ' ', connection_string or ''), 
+        Dict.__init__(self, connection_string=re.sub(r'\s+', ' ', connection_string or ''), 
             connection=connection, adaptor=adaptor, tries=tries, minconn=minconn, maxconn=maxconn, **args)
         if self.connection is None:
             if self.adaptor is None: 
