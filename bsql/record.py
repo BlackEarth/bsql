@@ -13,11 +13,9 @@ class Record(Dict):
 
     def __repr__(self):
         """represent the object in a form that would enable it to be recreated"""
-        sep = ' '
-        return "%s(%r,%s%s)" % (
+        sep = ', '
+        return "%s(db, %s)" % (
             self.__class__.__name__,
-            self.__dict__.get('db'),
-            sep,
             sep.join(["%s=%r" % (k, self.get(k)) for k in self.keys() if self.get(k) is not None]))
     
     def __str__(self):
