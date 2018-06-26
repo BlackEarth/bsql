@@ -31,9 +31,9 @@ LOG = logging.getLogger(__name__)
 class Database(Dict):
     """a database connection object."""
 
-    def __init__(self, connection_string=None, connection=None, adaptor=None, tries=3, minconn=1, maxconn=1, poolkey=None, **args):
+    def __init__(self, connection_string=None, connection=None, adaptor=None, minconn=1, maxconn=1, poolkey=None, **args):
         Dict.__init__(self, connection_string=re.sub(r'\s+', ' ', connection_string or ''), 
-            connection=connection, adaptor=adaptor, tries=tries, minconn=minconn, maxconn=maxconn, **args)
+            connection=connection, adaptor=adaptor, minconn=minconn, maxconn=maxconn, **args)
         if self.connection is None:
             if self.adaptor is None: 
                 import sqlite3
@@ -52,26 +52,6 @@ class Database(Dict):
 
     def __repr__(self):
         return "Database(%s)" % ", ".join(["%s=%r" % (k,v) for k,v in self.items() if k in ['connection_string']])
-
-    @property
-    def connection(self):
-        if self.__connection is None:
-            conn = None
-            if self.pool is not None:
-                conn = self.pool.getconn(key=self.poolkey or id(self))
-                LOG.info("db: %r key: %r pool: %r conn: %r" % (id(self), self.poolkey, id(self.pool), id(conn)))
-            else:
-                for i in range(self.tries):
-                    try: 
-                        conn = self.adaptor.connect(self.connection_string)
-                        break
-                    except: 
-                        if i==list(range(self.tries))[-1]:       # last try failed
-                            raise
-                        else:                               # wait a bit
-                            time.sleep(2*i)                 # doubling the time on each wait
-            self.__connection = conn
-        return self.__connection
 
     def migrate(self, migrations=None):
         from .migration import Migration
