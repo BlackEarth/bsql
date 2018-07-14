@@ -28,22 +28,43 @@ from bl.dict import Dict
 
 LOG = logging.getLogger(__name__)
 
+
 class Database(Dict):
     """a database connection object."""
 
-    def __init__(self, connection_string=None, connection=None, adaptor=None, minconn=1, maxconn=1, poolkey=None, **args):
-        Dict.__init__(self, connection_string=re.sub(r'\s+', ' ', connection_string or ''), 
-            connection=connection, adaptor=adaptor, minconn=minconn, maxconn=maxconn, **args)
+    def __init__(
+        self,
+        connection_string=None,
+        connection=None,
+        adaptor=None,
+        minconn=1,
+        maxconn=1,
+        poolkey=None,
+        **args
+    ):
+        Dict.__init__(
+            self,
+            connection_string=re.sub(r'\s+', ' ', connection_string) if connection_string else None,
+            connection=connection,
+            adaptor=adaptor,
+            minconn=minconn,
+            maxconn=maxconn,
+            **args
+        )
         if self.connection is None:
-            if self.adaptor is None: 
+            if self.adaptor is None:
                 import sqlite3
+
                 self.adaptor = sqlite3
             if type(self.adaptor) in (str, bytes):
                 self.adaptor = imp.load_module(self.adaptor, *imp.find_module(self.adaptor))
-            
+
             if self.adaptor.__name__ == 'psycopg2':
                 from psycopg2.pool import ThreadedConnectionPool
-                self.pool = ThreadedConnectionPool(self.minconn or 1, self.maxconn or 1, self.connection_string)
+
+                self.pool = ThreadedConnectionPool(
+                    self.minconn or 1, self.maxconn or 1, self.connection_string
+                )
             try:
                 if self.adaptor == 'sqlite3' or 'sqlite3' in str(self.adaptor):
                     self.execute("pragma foreign_keys = ON")
@@ -51,10 +72,18 @@ class Database(Dict):
                 pass
 
     def __repr__(self):
-        return "Database(%s)" % ", ".join(["%s=%r" % (k,v) for k,v in self.items() if k in ['connection_string']])
+        return "Database(%s)" % ", ".join(
+            [
+                "%s=%r" % (k, v)
+                for k, v in self.items()
+                if k in ['connection_string', 'connection', 'pool']
+                and self.get(k) is not None
+            ]
+        )
 
     def migrate(self, migrations=None):
         from .migration import Migration
+
         Migration.migrate(self, migrations=migrations or self.migrations)
 
     def cursor(self):
@@ -98,7 +127,7 @@ class Database(Dict):
         if RecordSet is None:
             from .recordset import RecordSet
 
-        records = RecordSet()                   # Populate a RecordSet (list) with the all resulting
+        records = RecordSet()  # Populate a RecordSet (list) with the all resulting
         for record in self.selectgen(sql, vals=vals, Record=Record, cursor=cursor):
             records.append(record)
         return records
@@ -118,14 +147,14 @@ class Database(Dict):
 
         result = c.fetchone()
         while result is not None:
-            record = Record(self)               # whatever the record class is, include another instance
-            for i in range(len(attr_list)):     # make each attribute dict-able by name
+            record = Record(self)  # whatever the record class is, include another instance
+            for i in range(len(attr_list)):  # make each attribute dict-able by name
                 record[attr_list[i]] = result[i]
             yield record
             result = c.fetchone()
 
         if cursor is None:
-            c.close()   # closing the cursor without committing rolls back the transaction.
+            c.close()  # closing the cursor without committing rolls back the transaction.
 
     def select_one(self, sql, vals=None, Record=None, cursor=None):
         """select one record from db
@@ -159,14 +188,15 @@ class Database(Dict):
     def quote(self, attr):
         """returns the given attribute in a form that is insertable in the insert() and update() methods."""
         t = type(attr)
-        if t == type(None): return 'NULL'
-        elif t == datetime.datetime:    # datetime -- put it in quotes
+        if t == type(None):
+            return 'NULL'
+        elif t == datetime.datetime:  # datetime -- put it in quotes
             return "'%s'" % str(attr)
         elif t == str:
             return self._quote_str(attr)
         elif t in [dict, Dict]:
             return "$$%s$$" % attr
-        else:                           # boolean or number -- no quoting needed
+        else:  # boolean or number -- no quoting needed
             return str(attr).lower()
 
     def _quote_str(self, attr):
@@ -194,37 +224,44 @@ class Database(Dict):
             return 'sqlite'
         elif self.dbconfig is not None and self.dbconfig.server is not None:
             return self.dbconfig.server
-        elif 'adodbapi' in str(self.connection): 
+        elif 'adodbapi' in str(self.connection):
             return 'sqlserver'
-        elif 'port=5432' in str(self.connection): 
+        elif 'port=5432' in str(self.connection):
             return 'postgresql'
-        elif 'port=3306' in str(self.connection): 
+        elif 'port=3306' in str(self.connection):
             return 'mysql'
-        else: 
+        else:
             return ''
-        
+
     def table_names(self):
         sn = self.servername().lower()
         if 'sqlite' in sn:
-            names = [r.name for r in self.select("select name from sqlite_master where type='table'")]
+            names = [
+                r.name for r in self.select("select name from sqlite_master where type='table'")
+            ]
         elif 'mysql' in sn:
             names = [r.values()[0] for r in self.select("show tables")]
         else:
-            names = [r.table_name for r in self.select("select table_name from information_schema.tables")]
+            names = [
+                r.table_name
+                for r in self.select("select table_name from information_schema.tables")
+            ]
         return names
 
     def table_exists(self, table_name):
         sn = self.servername().lower()
         if 'sqlite' in sn:
             return self.select_one(
-                "select * from sqlite_master where name=? and type='table' limit 1", (table_name,))
+                "select * from sqlite_master where name=? and type='table' limit 1", (table_name,)
+            )
         elif 'mysql' in sn:
-            return self.select_one(
-                "show tables like %s", (table_name,))
-        else:   
+            return self.select_one("show tables like %s", (table_name,))
+        else:
             # postgresql and sqlserver both use the sql standard here.
             return self.select_one(
-                "select * from information_schema.tables where table_name=%s limit 1", (table_name,))
+                "select * from information_schema.tables where table_name=%s limit 1", (table_name,)
+            )
+
 
 def doctests():
     """
@@ -237,6 +274,8 @@ def doctests():
     sqlite3.IntegrityError: UNIQUE constraint failed: table1.name
     """
 
+
 if __name__ == "__main__":
     import doctest
+
     doctest.testmod()
