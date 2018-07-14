@@ -218,9 +218,9 @@ class Database(Dict):
         """return a string that describes the database server being used"""
         if type(self.adaptor) in [str, bytes]:
             return self.adaptor
-        elif 'psycopg' in str(self.adaptor):
+        elif 'psycopg' in str(self.adaptor or self.connection):
             return 'postgresql'
-        elif 'sqlite' in str(self.adaptor):
+        elif 'sqlite' in str(self.adaptor or self.connection):
             return 'sqlite'
         elif self.dbconfig is not None and self.dbconfig.server is not None:
             return self.dbconfig.server
