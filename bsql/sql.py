@@ -20,22 +20,22 @@ class SQL(Text):
         if isinstance(value, str):
             return f"'{value}'"
         if value is None:
-            return "null"
+            return "NULL"
         elif value is True:
-            return "true"
+            return "TRUE"
         elif value is False:
-            return "false"
+            return "FALSE"
         else:
             return f"{value}"
 
     @classmethod
-    def insert(C, record, keys=None, auto_pk=False):
-        if keys is None:
-            keys = [
-                key
-                for key in record.keys()
-                if record[key] is not None and (auto_pk == False or key not in record.pk)
-            ]
+    def insert(C, record, keys=None, auto_pk=False, include_null=False):
+        keys = [
+            key
+            for key in keys or record.keys()
+            if (record[key] is not None or include_null == True)
+            and (auto_pk == False or key not in record.pk)
+        ]
         return (
             f"INSERT INTO {record.relation} ({', '.join(keys)}) "
             + f"VALUES ({', '.join([C.val(record[key]) for key in keys])});"
