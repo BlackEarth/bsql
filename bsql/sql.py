@@ -29,7 +29,7 @@ class SQL(Text):
             return f"{value}"
 
     @classmethod
-    def insert(C, record, keys=None, auto_pk=False, include_null=False):
+    def INSERT(C, record, keys=None, auto_pk=False, include_null=False):
         keys = [
             key
             for key in keys or record.keys()
@@ -39,4 +39,14 @@ class SQL(Text):
         return (
             f"INSERT INTO {record.relation} ({', '.join(keys)}) "
             + f"VALUES ({', '.join([C.val(record[key]) for key in keys])});"
+        )
+
+    @classmethod
+    def UPDATE(C, record, keys=None):
+        keys = [key for key in keys or record.keys() if key not in record.pk]
+        return (
+            f"UPDATE {record.relation} SET "
+            + ", ".join([f"{key}={C.val(record[key])}" for key in keys])
+            + " WHERE "
+            + " AND ".join([f"{key}={C.val(record[key])}" for key in record.pk])
         )
