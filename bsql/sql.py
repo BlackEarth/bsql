@@ -1,7 +1,7 @@
 
-import re
+import re, logging
 from bl.text import Text
-
+log = logging.getLogger(__name__)
 
 class SQL(Text):
     def __init__(self, comments=True, normalize=False, **args):
@@ -36,17 +36,21 @@ class SQL(Text):
             if (record[key] is not None or include_null == True)
             and (auto_pk == False or key not in record.pk)
         ]
-        return (
+        sql = (
             f"INSERT INTO {record.relation} ({', '.join(keys)}) "
             + f"VALUES ({', '.join([C.val(record[key]) for key in keys])});"
         )
+        log.debug(sql)
+        return sql
 
     @classmethod
     def UPDATE(C, record, keys=None):
         keys = [key for key in keys or record.keys() if key not in record.pk]
-        return (
+        sql = (
             f"UPDATE {record.relation} SET "
             + ", ".join([f"{key}={C.val(record[key])}" for key in keys])
             + " WHERE "
             + " AND ".join([f"{key}={C.val(record[key])}" for key in record.pk])
         )
+        log.debug(sql)
+        return sql
