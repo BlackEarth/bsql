@@ -23,7 +23,7 @@ Sample session:
 >>>
 """
 
-import datetime, imp, re, time, logging
+import datetime, imp, re, time, logging, importlib
 from bl.dict import Dict
 
 LOG = logging.getLogger(__name__)
@@ -42,49 +42,54 @@ class Database(Dict):
         poolkey=None,
         **args
     ):
+        conn_str = re.sub(r'\s+', ' ', connection_string) if connection_string else None
         Dict.__init__(
             self,
-            connection_string=re.sub(r'\s+', ' ', connection_string) if connection_string else None,
-            connection=connection,
+            connection_string=conn_str,
+            __connection=connection,
             adaptor=adaptor,
             minconn=minconn,
             maxconn=maxconn,
             **args
         )
-        if self.connection is None:
+        if self.__connection is None:
             if self.adaptor is None:
-                import sqlite3
+                self.adaptor = importlib.import_module('sqlite3')
+            elif isinstance(self.adaptor, str):
+                self.adaptor = importlib.import_module(self.adaptor)
 
-                self.adaptor = sqlite3
-            if type(self.adaptor) in (str, bytes):
-                self.adaptor = imp.load_module(self.adaptor, *imp.find_module(self.adaptor))
+            if self.connection_string is not None:
+                if self.adaptor.__name__ == 'psycopg2':
+                    self.pool = importlib.import_module('psycopg2.pool').ThreadedConnectionPool(
+                        self.minconn or 1, self.maxconn or 1, self.connection_string
+                    )
+                    self.__connection = self.pool.getconn(key=self.poolkey)
+                else:
+                    self.__connection = self.adaptor.connect(self.connection_string)
 
-            if self.adaptor.__name__ == 'psycopg2':
-                from psycopg2.pool import ThreadedConnectionPool
-
-                self.pool = ThreadedConnectionPool(
-                    self.minconn or 1, self.maxconn or 1, self.connection_string
-                )
-            try:
-                if self.adaptor == 'sqlite3' or 'sqlite3' in str(self.adaptor):
-                    self.execute("pragma foreign_keys = ON")
-            except:
-                pass
+            if 'sqlite3' in self.adaptor.__name__:
+                self.execute("pragma foreign_keys = ON")
 
     def __repr__(self):
         return "Database(%s)" % ", ".join(
             [
                 "%s=%r" % (k, v)
                 for k, v in self.items()
-                if k in ['connection_string', 'connection', 'pool']
-                and self.get(k) is not None
+                if k in ['connection_string', 'connection', 'pool'] and self.get(k) is not None
             ]
         )
 
-    def migrate(self, migrations=None):
-        from .migration import Migration
+    @property
+    def connection(self):
+        if self.__connection is not None:
+            return self.__connection
+        elif self.connection_string is not None and self.adaptor is not None:
+            return self.adaptor.connect(self.connection_string)
 
-        Migration.migrate(self, migrations=migrations or self.migrations)
+    def migrate(self, migrations=None):
+        importlib.import_module('bsql.migration').Migration.migrate(
+            self, migrations=migrations or self.migrations
+        )
 
     def cursor(self):
         """get a cursor for fine-grained transaction control."""
@@ -135,7 +140,7 @@ class Database(Dict):
     def selectgen(self, sql, vals=None, Record=None, cursor=None):
         """select from db and yield a generator"""
         c = cursor or self.cursor()
-        self.execute(sql, vals=vals, cursor=c)
+        self.execute(sql, vals=vals or [], cursor=c)
 
         if Record is None:
             from .record import Record
