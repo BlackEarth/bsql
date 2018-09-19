@@ -46,13 +46,13 @@ class Database(Dict):
         Dict.__init__(
             self,
             connection_string=conn_str,
-            __connection=connection,
+            connection=connection,
             adaptor=adaptor,
             minconn=minconn,
             maxconn=maxconn,
             **args
         )
-        if self.__connection is None:
+        if self.connection is None:
             if self.adaptor is None:
                 self.adaptor = importlib.import_module('sqlite3')
             elif isinstance(self.adaptor, str):
@@ -63,9 +63,9 @@ class Database(Dict):
                     self.pool = importlib.import_module('psycopg2.pool').ThreadedConnectionPool(
                         self.minconn or 1, self.maxconn or 1, self.connection_string or ''
                     )
-                    self.__connection = self.pool.getconn(key=self.poolkey)
+                    self.connection = self.pool.getconn(key=self.poolkey)
                 else:
-                    self.__connection = self.adaptor.connect(self.connection_string or '')
+                    self.connection = self.adaptor.connect(self.connection_string or '')
 
             if 'sqlite3' in self.adaptor.__name__:
                 self.execute("pragma foreign_keys = ON")
@@ -78,13 +78,6 @@ class Database(Dict):
                 if k in ['connection_string', 'connection', 'pool'] and self.get(k) is not None
             ]
         )
-
-    @property
-    def connection(self):
-        if self.__connection is not None:
-            return self.__connection
-        elif self.connection_string is not None and self.adaptor is not None:
-            return self.adaptor.connect(self.connection_string)
 
     def migrate(self, migrations=None):
         importlib.import_module('bsql.migration').Migration.migrate(
