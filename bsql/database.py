@@ -58,7 +58,7 @@ class Database(Dict):
             elif isinstance(self.adaptor, str):
                 self.adaptor = importlib.import_module(self.adaptor)
 
-            if self.connection_string is None:
+            if self.connection_string is not None:
                 if self.adaptor.__name__ == 'psycopg2':
                     self.pool = importlib.import_module('psycopg2.pool').ThreadedConnectionPool(
                         self.minconn or 1, self.maxconn or 1, self.connection_string or ''
