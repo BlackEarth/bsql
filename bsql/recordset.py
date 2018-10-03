@@ -1,6 +1,8 @@
 
-import sys
+import sys, json
 from bl.dict import Dict
+from bsql.json_encoder import JSONEncoder
+
 
 class RecordSet(list):
     """A set of database records"""
@@ -17,7 +19,7 @@ class RecordSet(list):
             if match == True:
                 result.append(record)
         return result
-        
+
     def select_one(self, **args):
         """return the first record in the set that has the attributes specified in args, or None."""
         for record in self:
@@ -34,15 +36,14 @@ class RecordSet(list):
             keys must be unique, or later duplicates will overwrite earlier ones."""
         d = Dict()
         for record in self:
-            if type(key) == str:            # string key
+            if type(key) == str:  # string key
                 d[record[key]] = record
-            else:                           # tuple key
+            else:  # tuple key
                 d[record.key_tuple(key)] = record
         return d
-        
-    def json(self, fields=[]):
-        """Return the contents of this record set as json"""
-        l = [record.json(fields=fields) for record in self]
-        return '[' + ', '.join(l) + ']'
 
-        
+    def json(self, indent=None, cls=None, kwargs=None):
+        """Return the contents of this record set as json"""
+        return json.dumps(
+            [record.dict(kwargs=kwargs) for record in self], indent=indent, cls=cls or JSONEncoder
+        )

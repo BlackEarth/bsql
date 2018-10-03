@@ -1,8 +1,9 @@
 
 
-import datetime
+import datetime, json
 from bl.dict import Dict
 from bl.string import String
+from bsql.json_encoder import JSONEncoder
 
 class Record(Dict):
     """A record from the database."""
@@ -31,18 +32,11 @@ class Record(Dict):
             key = self.keys()
         return tuple([self[k] for k in key])
         
-    def json(self, fields=None, indent=None, tag=None):
-        """Return the contents of this record as json"""
-        import json as _json
-        d = Dict()
-        if tag is None:
-            tag = String(self.__class__.__name__).identifier().lower()
-        j = Dict(**{tag: d})
-        for k in fields or list(self.keys()): 
-            d[k] = self.get(k)
-            if type(d[k]) == datetime.datetime:         # datetime not compatible with json.dumps
-                d[k] = d[k].isoformat(' ')              # -- iso formatted string
-        return _json.dumps(j, indent=indent)
+    def dict(self, kwargs=None):
+        return dict(self, **(kwargs or {}))
+
+    def json(self, indent=None, cls=None, kwargs=None):
+        return json.dumps(self.dict(kwargs=kwargs), indent=indent or 2, cls=cls or JSONEncoder)
 
     def using_keys(self, keys=[]):
         """return a copy of this record that only has the given keys. 
