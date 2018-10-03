@@ -28,20 +28,20 @@ class Migration(Model):
         try:
             # will throw an error if this is the first migration -- migrations table doesn't yet exist.
             # (and this approach is a bit easier than querying for the existence of the table...)
-            migrations_ids = [r.id for r in M(db).select()]
-            LOG.debug("migrations_ids = " + str(migrations_ids))
+            migration_ids = [r.id for r in M(db).select()]
+            LOG.debug("migration_ids = " + str(migration_ids))
         except:
-            migrations_ids = []
+            migration_ids = []
         fns = [fn for fn 
                 in glob(os.path.join(migrations, "[0-9]*-*.*"))     # active migrations have SEQ-NAME.*
-                if M.create_id(fn) not in migrations_ids]
+                if M.create_id(fn) not in migration_ids]
         fns.sort()
         LOG.info("Migrate Database: %d migrations in %r" % (len(fns), migrations))
         for fn in fns:
             id = M.create_id(fn)
-            LOG.info(id + ': ' + fn)
+            # LOG.info(id + ': ' + fn)
             ext = os.path.splitext(fn)[1]
-            if id in migrations_ids: 
+            if id in migration_ids: 
                 continue
             else:
                 with open(fn, 'r') as f:
@@ -59,8 +59,10 @@ class Migration(Model):
                     db.execute(script, cursor=cursor)
                     cursor.connection.commit()
                     cursor.close()
+                elif ext=='.py':                                    # script is a python script
+                    subprocess.check_output(['python', fn])
                 else:                                               # script is system script, subprocess it
-                    LOG.info(subprocess.check_output([fn]))
+                    subprocess.check_output([fn])
                 migration = M(db, id=id, description=description)
                 migration.insert()
                 
