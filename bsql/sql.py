@@ -18,7 +18,7 @@ class SQL(Text):
     def val(C, value):
         """return a string with a value ready for inclusion in SQL text."""
         if isinstance(value, str):
-            return f"'{value}'"
+            return f"""'{value.replace("'", "''")}'"""
         if value is None:
             return "NULL"
         elif value is True:
