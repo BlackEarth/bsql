@@ -33,10 +33,10 @@ class Record(Dict):
         return tuple([self[k] for k in key])
         
     def dict(self, kwargs=None):
-        return dict(self, **(kwargs or {}))
+        return dict(self, **(kwargs if kwargs is not None else {}))
 
-    def json(self, indent=None, cls=None, kwargs=None):
-        return json.dumps(self.dict(kwargs=kwargs), indent=indent or 2, cls=cls or JSONEncoder)
+    def json(self, indent=2, cls=None, kwargs=None):
+        return json.dumps(self.dict(kwargs=kwargs), indent=indent, cls=cls or JSONEncoder)
 
     def using_keys(self, keys=[]):
         """return a copy of this record that only has the given keys. 

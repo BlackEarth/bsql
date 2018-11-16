@@ -79,9 +79,10 @@ class Model(Record):
                     % (
                         key,
                         self.get(key)
-                        or (hasattr(self, key) and self.__getattribute__(key) or None),
+                        # or (hasattr(self, key) and self.__getattribute__(key) or None),
                     )
                     for key in (self.rk or self.pk)
+                    if key in self
                 ]
             ),
         )
