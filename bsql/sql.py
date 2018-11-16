@@ -4,7 +4,7 @@ from bl.text import Text
 log = logging.getLogger(__name__)
 
 class SQL(Text):
-    def __init__(self, comments=True, normalize=False, **args):
+    def __init__(self, comments=True, normalize=False, sp=' ', **args):
         super().__init__(**args)
         if self.text is not None and comments is False:
             # remove SQL comments
@@ -13,6 +13,7 @@ class SQL(Text):
                 # convert all whitespace to single spaces
                 self.text = re.sub(r'\s+', ' ', self.text)
                 self.text = self.text.replace("( ", "(").replace(" )", ")")
+                self.text = self.text.replace(', ', f',{sp}')
 
     @classmethod
     def val(C, value):
