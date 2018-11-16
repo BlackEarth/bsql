@@ -29,26 +29,26 @@ class SQL(Text):
             return f"{value}"
 
     @classmethod
-    def INSERT(C, record, keys=None, auto_pk=False, include_null=False):
+    def INSERT(C, record, keys=None, auto_pk=False, nulls=False, sp=' '):
         keys = [
             key
             for key in keys or record.keys()
-            if (record[key] is not None or include_null == True)
+            if (record[key] is not None or nulls == True)
             and (auto_pk == False or key not in record.pk)
         ]
         sql = (
-            f"INSERT INTO {record.relation} ({', '.join(keys)}) "
-            + f"VALUES ({', '.join([C.val(record[key]) for key in keys])});"
+            f"INSERT INTO {record.relation} ({(','+sp).join(keys)}) "
+            + f"VALUES ({(','+sp).join([C.val(record[key]) for key in keys])});"
         )
         log.debug(sql)
         return sql
 
     @classmethod
-    def UPDATE(C, record, keys=None):
+    def UPDATE(C, record, keys=None, sp=' '):
         keys = [key for key in keys or record.keys() if key not in record.pk]
         sql = (
             f"UPDATE {record.relation} SET "
-            + ", ".join([f"{key}={C.val(record[key])}" for key in keys])
+            + (","+sp).join([f"{key}={C.val(record[key])}" for key in keys])
             + " WHERE "
             + " AND ".join([f"{key}={C.val(record[key])}" for key in record.pk])
         )
