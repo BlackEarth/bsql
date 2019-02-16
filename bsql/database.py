@@ -6,21 +6,6 @@ Designed to be small, fast, and transparent. Integrates with user-defined record
 * RecordSet:  set of Records (inherits from list)
 * Database :  a database connection
                 (init with a standard DB-API 2.0 connection string)
-
----------------------------------------------------------------------------
-                                            Memory:  Footprint:
-# > python                                  4656 K   4656 K (Python 3.4.3 OSX)
-# >>> from bl.database import Database      5460 K    804 K (YMMV)
----------------------------------------------------------------------------
-Sample session: 
->>> d = Database()      # in-memory sqlite3 database
->>> d.execute("create table table1 (name varchar primary key, email varchar not null unique)")
->>> d.execute("insert into table1 (name, email) values ('sah', 'sah@blackearthgroup.com')")
->>> records = d.select("select * from table1")
->>> records[0].name
-'sah'
->>> d.connection.close()
->>>
 """
 
 import datetime, imp, re, time, logging, importlib
@@ -30,17 +15,10 @@ LOG = logging.getLogger(__name__)
 
 
 class Database(Dict):
-    """a database connection object."""
+    """a database / connection object."""
 
     def __init__(
-        self,
-        connection_string=None,
-        connection=None,
-        adaptor=None,
-        minconn=1,
-        maxconn=1,
-        poolkey=None,
-        **args
+        self, connection_string=None, connection=None, adaptor=None, minconn=1, maxconn=1, poolkey=None, **args
     ):
         conn_str = re.sub(r'\s+', ' ', connection_string) if connection_string else None
         Dict.__init__(
@@ -71,13 +49,11 @@ class Database(Dict):
                 self.execute("pragma foreign_keys = ON")
 
     def __repr__(self):
-        return "Database(%s)" % ", ".join(
-            [
-                "%s=%r" % (k, v)
-                for k, v in self.items()
-                if k in ['connection_string', 'connection', 'pool'] and self.get(k) is not None
-            ]
-        )
+        return "Database(%s)" % ", ".join([
+            "%s=%r" % (k, v)
+            for k, v in self.items()
+            if k in ['connection_string', 'connection', 'pool'] and self.get(k) is not None
+        ])
 
     def migrate(self, migrations=None):
         importlib.import_module('bsql.migration').Migration.migrate(
@@ -257,7 +233,8 @@ class Database(Dict):
         else:
             # postgresql and sqlserver both use the sql standard here.
             return self.select_one(
-                "select * from information_schema.tables where table_name=%s limit 1", (table_name,)
+                "select * from information_schema.tables where table_name=%s limit 1",
+                (table_name,)
             )
 
 

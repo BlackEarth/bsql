@@ -18,57 +18,21 @@ from .recordset import RecordSet
 
 
 class Model(Record):
-    """abstract base class for database models to inherit from, holds shared functionality.
-
-    # -- Use an in-memory sqlite3 database for testing: --
-    >>> from bsql.database import Database
-    >>> db = Database()
-    >>> db.execute("create table model_test (id integer primary key autoincrement, name varchar)")
-
-    # -- Example usage: --
-    >>> class Temp(Model):                      # set up a temporary model
-    ...     relation = 'model_test'
-    ...     pk = ['id']
-    ...
-    >>> t = Temp(db)                            # new instance
-    >>> t.name = 'something temporary'          # set an attribute
-    >>> t.insert()                              # insert a new record
-    >>> t                                       # values are reloaded from the insert
-    {'id': 1, 'name': 'something temporary'}
-    >>> t.name = "another thing"                # edit an attribute
-    >>> t.commit()                              # update the record in the database
-    >>> t
-    {'id': 1, 'name': 'another thing'}
-    >>> t1 = t.select_one(id=t.id)              # get the full record
-    >>> t1
-    {'id': 1, 'name': 'another thing'}
-    >>> t2 = Temp(db)
-    >>> t2.name = 'thing 2'
-    >>> t2.insert()
-    >>> ts = t.select(); len(ts)                # there are two records
-    2
-    >>> ts = t.select(name='thing 2')
-    >>> len(ts)                                 # only one such record
-    1
-    >>> t1.delete()                             # delete a record
-    >>> ts = t.select(); len(ts)                # there is now one record
-    1
-
-    -- The rest is teardown: --
-    >>> db.execute("drop table model_test")
-    """
+    """abstract base class for database models to inherit from, holds shared functionality."""
 
     relation = None  # the database relation with which this model deals primarily
     pk = ['id']  # fields that make up the primary key of a record
-    #   is there a way to do this by introspection at instance init?
-    rk = pk  # fields that are used to create the __repr__ for this model; default pk
     where = None  # only include records that match this where clause.
-    #   often used to have multiple classes in one table (i.e., single-table inheritance)
 
     def __init__(self, db, **args):
         Record.__init__(self, db, **args)
         if self.relation is None:
             self.__dict__['relation'] = String(self.__class__.__name__).identifier().lower() + 's'
+        self.__dict__['errors'] = Dict()
+
+    @property
+    def errors(self):
+        return self.__dict__['errors']
 
     def __repr__(self):
         return "%s(%s)" % (
@@ -82,7 +46,7 @@ class Model(Record):
                         # or (hasattr(self, key) and self.__getattribute__(key) or None),
                     )
                     for key in (self.rk or self.pk)
-                    if key in self
+                    if key in self.keys()
                 ]
             ),
         )
@@ -634,7 +598,7 @@ class Model(Record):
         """
         record = Class(db, **element.attrib)
         for ch in [ch for ch in element.xpath("*") if ch.text not in [None, '']]:
-            tag = re.sub("^\{[^\}]*\}", "", ch.tag)
+            tag = re.sub(r"^\{[^\}]*\}", "", ch.tag)
             record[tag] = ch.text
         return record
 
